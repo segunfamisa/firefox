@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import org.mozilla.experiments.nimbus.AvailableExperiment
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.theme.FirefoxTheme
 
 /**

@@ -38,7 +38,7 @@ import mozilla.components.concept.storage.LoginsStorage
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 import org.mozilla.fenix.R
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.debugsettings.ui.DebugDrawer
 import org.mozilla.fenix.theme.FirefoxTheme
 import java.util.UUID

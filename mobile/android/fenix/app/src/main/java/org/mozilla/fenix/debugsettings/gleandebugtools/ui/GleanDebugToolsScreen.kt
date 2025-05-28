@@ -31,7 +31,7 @@ import mozilla.components.compose.base.textfield.TextField
 import mozilla.components.lib.state.ext.observeAsState
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.SwitchWithLabel
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.debugsettings.gleandebugtools.GleanDebugToolsAction
 import org.mozilla.fenix.debugsettings.gleandebugtools.GleanDebugToolsState
 import org.mozilla.fenix.debugsettings.gleandebugtools.GleanDebugToolsStore

@@ -33,7 +33,7 @@ import mozilla.components.concept.storage.CreditCardsAddressesStorage
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.SwitchWithLabel
 import org.mozilla.fenix.compose.list.RadioButtonListItem
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.theme.FirefoxTheme
 
 /**

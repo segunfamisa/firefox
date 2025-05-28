@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import mozilla.components.concept.storage.Address
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.list.IconListItem
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.settings.address.ext.getAddressLabel
 import org.mozilla.fenix.theme.FirefoxTheme
 

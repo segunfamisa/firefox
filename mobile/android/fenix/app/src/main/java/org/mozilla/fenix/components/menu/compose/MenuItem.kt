@@ -36,7 +36,7 @@ import mozilla.components.compose.base.Divider
 import org.mozilla.fenix.R
 import org.mozilla.fenix.compose.list.IconListItem
 import org.mozilla.fenix.compose.list.ImageListItem
-import org.mozilla.fenix.compose.list.TextListItem
+import mozilla.components.compose.base.list.TextListItem
 import org.mozilla.fenix.theme.FirefoxTheme
 
 private val MENU_ITEM_HEIGHT_WITHOUT_DESC = 52.dp
