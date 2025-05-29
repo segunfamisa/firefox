@@ -5,14 +5,20 @@
 package mozilla.components.feature.autofill.ui.search
 
 import mozilla.components.concept.storage.Login
+import mozilla.components.lib.state.State
 
 /**
  * State driving the login search screen
  *
  * @property logins List of [Login]s
- * @property searchText
+ * @property searchText Search text
  */
 internal data class LoginsSearchState(
     val logins: List<Login> = emptyList(),
     val searchText: String,
-)
+) : State {
+
+    companion object Companion {
+        val Default = LoginsSearchState(logins = emptyList(), searchText = "")
+    }
+}

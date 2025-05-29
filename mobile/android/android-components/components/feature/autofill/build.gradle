@@ -36,6 +36,7 @@ dependencies {
     implementation project(':concept-storage')
     implementation project(':compose-base')
     implementation project(':lib-publicsuffixlist')
+    implementation project(':lib-state')
     implementation project(':service-digitalassetlinks')
     implementation project(':support-base')
     implementation project(':support-ktx')
