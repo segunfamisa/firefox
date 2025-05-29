@@ -45,4 +45,10 @@
     <!-- Autofill: Hint shown in the text field used to search specific logins. Shown when the field
      is empty and the user has not entered any text into it yet. -->
     <string name="mozac_feature_autofill_search_hint">Search logins</string>
+
+    <!-- Autofill: Content description for the toolbar close button -->
+    <string name="mozac_feature_autofill_toolbar_close">Close</string>
+
+    <!-- Autofill: Content description for the toolbar back button -->
+    <string name="mozac_feature_autofill_toolbar_back">Back</string>
 </resources>
