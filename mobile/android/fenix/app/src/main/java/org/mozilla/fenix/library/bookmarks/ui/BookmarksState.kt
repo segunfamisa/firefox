@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import mozilla.appservices.places.BookmarkRoot
 import mozilla.components.lib.state.State
+import mozilla.components.support.utils.sorting.naturalStringOrder
 import org.mozilla.fenix.R
 
 internal sealed class BookmarksListSortOrder {
@@ -29,9 +30,7 @@ internal sealed class BookmarksListSortOrder {
             get() = "alphabetical-$ascending"
 
         override val comparator: Comparator<BookmarkItem>
-            get() = compareByDescending<BookmarkItem> { it.title.lowercase() }.let {
-                if (ascending) it.reversed() else it
-            }
+            get() = naturalStringOrder(ascending = ascending) { it.title.lowercase() }
     }
 
     data object Positional : BookmarksListSortOrder() {

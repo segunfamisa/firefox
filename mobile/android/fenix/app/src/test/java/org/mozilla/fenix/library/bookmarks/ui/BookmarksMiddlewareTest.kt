@@ -37,6 +37,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
+import org.mozilla.fenix.components.menu.store.BookmarkState
 import org.mozilla.fenix.library.bookmarks.friendlyRootTitle
 import org.mozilla.fenix.utils.LastSavedFolderCache
 
@@ -168,6 +169,64 @@ class BookmarksMiddlewareTest {
 
         val store = middleware.makeStore()
         assertEquals(5, store.state.bookmarkItems.size)
+    }
+
+    @Test
+    fun `GIVEN bookmarks WHEN alphabetical sorting is selected THEN bookmarks should be sorted by natural order`() = runTestOnMain {
+        val bookmark1 = generateBookmark(
+            guid = "1",
+            title = "b1",
+            url = "https://mozilla.org",
+            position = 1.toUInt(),
+            lastModified = 0L,
+        )
+        val bookmark2 = generateBookmark(
+            guid = "2",
+            title = "b2",
+            url = "https://mozilla.org",
+            position = 2.toUInt(),
+            lastModified = 0L,
+        )
+
+        val bookmark50 = generateBookmark(
+            guid = "3",
+            title = "b50",
+            url = "https://mozilla.org",
+            position = 3.toUInt(),
+            lastModified = 0L,
+        )
+        val bookmark100 = generateBookmark(
+            guid = "4",
+            title = "b100",
+            url = "https://mozilla.org",
+            position = 4.toUInt(),
+            lastModified = 0L,
+        )
+
+        val root = BookmarkNode(
+            type = BookmarkNodeType.FOLDER,
+            guid = BookmarkRoot.Mobile.id,
+            parentGuid = null,
+            position = 0U,
+            title = "mobile",
+            url = null,
+            dateAdded = 0,
+            lastModified = 0,
+            children = listOf(bookmark50, bookmark1, bookmark2, bookmark100),
+        )
+        `when`(bookmarksStorage.countBookmarksInTrees(listOf(BookmarkRoot.Menu.id, BookmarkRoot.Toolbar.id, BookmarkRoot.Unfiled.id))).thenReturn(0u)
+        `when`(bookmarksStorage.getTree(BookmarkRoot.Mobile.id)).thenReturn(root)
+        val middleware = buildMiddleware()
+
+        val store = middleware.makeStore()
+
+        store.dispatch(BookmarksListMenuAction.SortMenu.AtoZClicked)
+        store.waitUntilIdle()
+
+        assertEquals(
+            listOf(bookmark1, bookmark2, bookmark50, bookmark100).map { it.title },
+            store.state.bookmarkItems.map { it.title },
+        )
     }
 
     @Test
