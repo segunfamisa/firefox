@@ -86,6 +86,12 @@ class SiteSettingsFragment : PreferenceFragmentCompat() {
 
         val cameraPhoneFeatures = requirePreference<Preference>(phoneFeature.getPreferenceId())
         cameraPhoneFeatures.summary = phoneFeature.getActionLabel(context, settings = settings)
+        cameraPhoneFeatures.icon?.setTint(
+            ContextCompat.getColor(
+                context,
+                R.color.fx_mobile_icon_color_primary,
+            ),
+        )
 
         cameraPhoneFeatures.onPreferenceClickListener = OnPreferenceClickListener {
             navigateToPhoneFeature(phoneFeature)

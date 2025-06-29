@@ -29,6 +29,8 @@ import org.mozilla.fenix.settings.PhoneFeature
 import org.mozilla.fenix.settings.PhoneFeature.AUTOPLAY
 import org.mozilla.fenix.settings.PhoneFeature.CAMERA
 import org.mozilla.fenix.settings.PhoneFeature.CROSS_ORIGIN_STORAGE_ACCESS
+import org.mozilla.fenix.settings.PhoneFeature.LOCAL_DEVICE_ACCESS
+import org.mozilla.fenix.settings.PhoneFeature.LOCAL_NETWORK_ACCESS
 import org.mozilla.fenix.settings.PhoneFeature.LOCATION
 import org.mozilla.fenix.settings.PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS
 import org.mozilla.fenix.settings.PhoneFeature.MICROPHONE
@@ -80,6 +82,8 @@ class SitePermissionsDetailsExceptionsFragment : PreferenceFragmentCompat() {
         initPhoneFeature(CROSS_ORIGIN_STORAGE_ACCESS)
         initPhoneFeature(MEDIA_KEY_SYSTEM_ACCESS)
         initAutoplayFeature()
+        initPhoneFeature(LOCAL_DEVICE_ACCESS)
+        initPhoneFeature(LOCAL_NETWORK_ACCESS)
         bindClearPermissionsButton()
     }
 

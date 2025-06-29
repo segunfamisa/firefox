@@ -250,5 +250,7 @@ class TrustPanelStoreTest {
         whenever(sitePermissions.localStorage).thenReturn(SitePermissions.Status.NO_DECISION)
         whenever(sitePermissions.crossOriginStorageAccess).thenReturn(SitePermissions.Status.NO_DECISION)
         whenever(sitePermissions.mediaKeySystemAccess).thenReturn(SitePermissions.Status.NO_DECISION)
+        whenever(sitePermissions.localDeviceAccess).thenReturn(SitePermissions.Status.NO_DECISION)
+        whenever(sitePermissions.localNetworkAccess).thenReturn(SitePermissions.Status.NO_DECISION)
     }
 }
