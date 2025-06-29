@@ -1519,6 +1519,8 @@ class Settings(private val appContext: Context) : PreferencesHolder {
             persistentStorage = getSitePermissionsPhoneFeatureAction(PhoneFeature.PERSISTENT_STORAGE),
             crossOriginStorageAccess = getSitePermissionsPhoneFeatureAction(PhoneFeature.CROSS_ORIGIN_STORAGE_ACCESS),
             mediaKeySystemAccess = getSitePermissionsPhoneFeatureAction(PhoneFeature.MEDIA_KEY_SYSTEM_ACCESS),
+            localDeviceAccess = Action.ASK_TO_ALLOW,
+            localNetworkAccess = Action.ASK_TO_ALLOW,
         )
     }
 
