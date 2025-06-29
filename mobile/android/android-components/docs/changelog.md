@@ -5,6 +5,8 @@ permalink: /changelog/
 ---
 
 # 143.0 (In Development)
+* **concept-engine** and **browser-engine-gecko**
+  * Added new LNA content permissions - `ContentLocalDeviceAccess` and `ContentLocalNetworkAccess` and map to respective `GeckoSession.PermissionDelegate` permission. [Bug 1971500](https://bugzilla.mozilla.org/show_bug.cgi?id=1971500)
 
 # 142.0
 * **feature-tabs**:
