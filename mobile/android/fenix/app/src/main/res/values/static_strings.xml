@@ -110,6 +110,9 @@
 
     <!-- Label for enabling the DNS over HTTPS settings -->
     <string name="preferences_debug_settings_enable_doh_settings" translatable="false">Enable DNS over HTTPS settings</string>
+
+    <!-- Label for enabling LNA blocking -->
+    <string name="preferences_debug_settings_enable_lna_blocking" translatable="false">Enable LNA blocking</string>
     
     <!-- A secret menu option in the tabs tray for making a tab inactive for testing. -->
     <string name="inactive_tabs_menu_item">Make inactive</string>
