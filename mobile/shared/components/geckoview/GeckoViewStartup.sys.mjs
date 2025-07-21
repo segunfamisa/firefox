@@ -220,6 +220,13 @@ export class GeckoViewStartup {
           ],
         });
 
+        GeckoViewUtils.addLazyGetter(this, "GeckoViewAddressMetadata", {
+          module: "resource://gre/modules/GeckoViewAddressMetadata.sys.mjs",
+          ged: [
+            "GeckoView:AddressMetadata:GetFormLayout",
+          ]
+        });
+
         GeckoViewUtils.addLazyGetter(this, "GeckoViewPreferences", {
           module: "resource://gre/modules/GeckoViewPreferences.sys.mjs",
           ged: [

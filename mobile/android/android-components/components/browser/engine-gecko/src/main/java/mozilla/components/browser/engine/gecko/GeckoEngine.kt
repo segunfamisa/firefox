@@ -14,6 +14,8 @@ import mozilla.components.ExperimentalAndroidComponentsApi
 import mozilla.components.browser.engine.fission.GeckoWebContentIsolationMapper.intoWebContentIsolationStrategy
 import mozilla.components.browser.engine.gecko.activity.GeckoActivityDelegate
 import mozilla.components.browser.engine.gecko.activity.GeckoScreenOrientationDelegate
+import mozilla.components.browser.engine.gecko.addressmetadata.DefaultRuntimeAddressMetadataAccessor
+import mozilla.components.browser.engine.gecko.addressmetadata.RuntimeAddressMetadataAccessor
 import mozilla.components.browser.engine.gecko.ext.getAntiTrackingPolicy
 import mozilla.components.browser.engine.gecko.ext.getEtpCategory
 import mozilla.components.browser.engine.gecko.ext.getEtpLevel
@@ -47,6 +49,7 @@ import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.engine.Settings
 import mozilla.components.concept.engine.activity.ActivityDelegate
 import mozilla.components.concept.engine.activity.OrientationDelegate
+import mozilla.components.concept.engine.addressmetadata.AddressField
 import mozilla.components.concept.engine.content.blocking.TrackerLog
 import mozilla.components.concept.engine.content.blocking.TrackingProtectionExceptionStorage
 import mozilla.components.concept.engine.fission.WebContentIsolationStrategy
@@ -106,6 +109,7 @@ class GeckoEngine(
         GeckoTrackingProtectionExceptionStorage(runtime),
     private val geckoPreferenceAccessor: GeckoPreferenceAccessor = DefaultGeckoPreferenceAccessor(),
     private val runtimeTranslationAccessor: RuntimeTranslationAccessor = DefaultRuntimeTranslationAccessor(),
+    private val addressMetadataAccessor: RuntimeAddressMetadataAccessor = DefaultRuntimeAddressMetadataAccessor(),
 ) : Engine, WebExtensionRuntime, TranslationsRuntime, BrowserPreferencesRuntime {
     private val executor by lazy { executorProvider.invoke() }
     private val localeUpdater = LocaleSettingUpdater(context, runtime)
@@ -1086,6 +1090,10 @@ class GeckoEngine(
                    GeckoResult<Void>()
             },
         )
+    }
+
+    override fun getAddressFields(countryCode: String, onSuccess: (List<AddressField>) -> Unit, onError: (Throwable) -> Unit) {
+        addressMetadataAccessor.getAddressFields(countryCode, onSuccess, onError)
     }
 
     /**
