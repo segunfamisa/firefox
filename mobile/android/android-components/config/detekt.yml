@@ -787,3 +787,6 @@ style:
 mozilla-rules:
   ForbiddenSuppression:
     active: true
+    forbiddenSuppressions:
+      - 'LongMethod'
+      - 'ComplexMethod'

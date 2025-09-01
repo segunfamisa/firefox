@@ -2,6 +2,111 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>ForbiddenSuppression:AbstractFetchDownloadService.kt$AbstractFetchDownloadService$@Suppress("ComplexCondition", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AbstractFetchDownloadService.kt$AbstractFetchDownloadService$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AbstractFetchDownloadService.kt$AbstractFetchDownloadService$@Suppress("TooManyFunctions", "LargeClass", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AbstractFetchDownloadService.kt$AbstractFetchDownloadService.&lt;no name provided&gt;$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AcornColorGrid.kt$@Suppress("LongMethod", "MagicNumber")</ID>
+    <ID>ForbiddenSuppression:AcornColorGrid.kt$@Suppress("LongParameterList", "LongMethod", "MagicNumber")</ID>
+    <ID>ForbiddenSuppression:AcornColors.kt$AcornColors$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ActionButton.kt$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Addon.kt$Addon.Companion$@Suppress("MagicNumber", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AddonsManagerAdapter.kt$AddonsManagerAdapter$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AddonsManagerAdapter.kt$AddonsManagerAdapter$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AnimatedProgressBar.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AppLinksInterceptor.kt$AppLinksInterceptor$@Suppress("ComplexMethod", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:AppLinksUseCases.kt$AppLinksUseCases.GetAppLinkRedirect$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:AppServicesStateMachineChecker.kt$AppServicesStateMachineChecker$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AudioFocus.kt$AudioFocus$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BaseBrowserFragment.kt$BaseBrowserFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserDisplayToolbar.kt$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserEditToolbar.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserFragment.kt$BrowserFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserMenu.kt$BrowserMenu$@Suppress("InflateParams", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserMenuPositioning.kt$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserStateReader.kt$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserStateReader.kt$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarStore.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:Bundle.kt$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:ByteArray.kt$@Suppress("ComplexMethod", "NestedBlockDepth")</ID>
+    <ID>ForbiddenSuppression:CFRPopupContent.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CFRPopupFullscreenLayout.kt$CFRPopupFullscreenLayout$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CFRPopupShape.kt$CFRPopupShape$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:Client.kt$Client$@Suppress("ComplexMethod", "TooGenericExceptionCaught")</ID>
+    <ID>ForbiddenSuppression:ContainerToolbarAction.kt$ContainerToolbarAction$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:ContentStateReducer.kt$ContentStateReducer$@Suppress("LongMethod", "ThrowsCount")</ID>
+    <ID>ForbiddenSuppression:CrashMiddleware.kt$CrashMiddleware$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:CreditCardUtils.kt$CreditCardUtils$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:CustomPlacementPopup.kt$@Suppress("ComplexMethod", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:CustomTabWindowFeature.kt$CustomTabWindowFeature$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:DefaultSelectionActionDelegate.kt$DefaultSelectionActionDelegate$@SuppressWarnings("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadMiddleware.kt$DownloadMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Dropdown.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DropdownMenu.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:EngineStateReducer.kt$EngineStateReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ExpandableLayout.kt$ExpandableLayout$@Suppress("ComplexMethod", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:FilePicker.kt$FilePicker$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:FxaAccountManager.kt$FxaAccountManager$@Suppress("ComplexMethod", "ReturnCount", "ThrowsCount", "NestedBlockDepth", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:FxaAccountManager.kt$FxaAccountManager$@Suppress("NestedBlockDepth", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:FxaDeviceConstellation.kt$FxaDeviceConstellation$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:FxaWebChannelFeature.kt$FxaWebChannelFeature.Companion$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:FxaWebChannelFeature.kt$FxaWebChannelFeature.WebChannelViewContentMessageHandler$@SuppressWarnings("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoEngine.kt$GeckoEngine$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoEngineSession.kt$GeckoEngineSession$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoEngineSession.kt$GeckoEngineSession$@Suppress("ComplexMethod", "NestedBlockDepth")</ID>
+    <ID>ForbiddenSuppression:GeckoEngineSession.kt$GeckoEngineSession.Companion$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoPermissionRequest.kt$GeckoPermissionRequest.Media.Companion$@Suppress("ComplexMethod", "SwitchIntDef")</ID>
+    <ID>ForbiddenSuppression:GeckoPromptDelegate.kt$GeckoPromptDelegate$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoSitePermissionsStorage.kt$GeckoSitePermissionsStorage$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:GeckoSitePermissionsStorage.kt$GeckoSitePermissionsStorage$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:GleanCrashReporterService.kt$GleanCrashReporterService$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HighlightedDomainUrl.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:IconDirectoryEntry.kt$@Suppress("MagicNumber", "ReturnCount", "ComplexMethod", "NestedBlockDepth", "ComplexCondition")</ID>
+    <ID>ForbiddenSuppression:IconResourceComparator.kt$@Suppress("MagicNumber", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:InlineAutocompleteEditText.kt$InlineAutocompleteEditText$@SuppressWarnings("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:InlineAutocompleteTextField.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:Lexer.kt$Lexer$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Lexer.kt$Lexer$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:LinkingMiddleware.kt$LinkingMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:MozillaSocorroService.kt$MozillaSocorroService$@Suppress("LongParameterList", "LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:NestedGeckoView.kt$NestedGeckoView$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Origin.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:Parser.kt$Parser$@Suppress("ComplexMethod", "LongMethod", "ThrowsCount")</ID>
+    <ID>ForbiddenSuppression:PermissionsDialogFragment.kt$PermissionsDialogFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:PopupToMenuItemsMapper.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:PromptFeature.kt$PromptFeature$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:PromptFeature.kt$PromptFeature$@Suppress("ComplexMethod", "LongMethod", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:PromptFeature.kt$PromptFeature$@Suppress("UNCHECKED_CAST", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:QrFragment.kt$QrFragment$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:QrFragment.kt$QrFragment.Companion$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:ReaderViewControlsBar.kt$ReaderViewControlsBar$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:RecentlyClosedMiddleware.kt$RecentlyClosedMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SearchEngineReader.kt$SearchEngineReader$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SearchMiddleware.kt$SearchMiddleware$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchSuggestionProvider.kt$SearchSuggestionProvider$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SecurePrefsReliabilityExperiment.kt$SecurePrefsReliabilityExperiment$@Suppress("TooGenericExceptionCaught", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SitePermissionsFeature.kt$SitePermissionsFeature$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SitePermissionsFeature.kt$SitePermissionsFeature$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SystemEngineView.kt$SystemEngineView$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SystemEngineView.kt$SystemEngineView$@Suppress("ComplexMethod", "NestedBlockDepth")</ID>
+    <ID>ForbiddenSuppression:SystemEngineView.kt$SystemEngineView.&lt;no name provided&gt;$@Suppress("ReturnCount", "NestedBlockDepth", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabListReducer.kt$TabListReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsRemovedMiddleware.kt$TabsRemovedMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TextField.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ThumbnailsMiddleware.kt$ThumbnailsMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TimePickerDialogFragment.kt$TimePickerDialogFragment$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:ToolbarActivity.kt$ToolbarActivity$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ToolbarActivity.kt$ToolbarActivity$@Suppress("TooGenericExceptionCaught", "LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsMiddleware.kt$TranslationsMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsStateReducer.kt$TranslationsStateReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:UrlMatcher.kt$UrlMatcher$@Suppress("ReturnCount", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:UrlMatcher.kt$UrlMatcher.Companion$@Suppress("ThrowsCount", "ComplexMethod", "NestedBlockDepth")</ID>
+    <ID>ForbiddenSuppression:Utils.kt$@Suppress("NestedBlockDepth", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:VerticalSwipeRefreshLayout.kt$VerticalSwipeRefreshLayout$@Suppress("ComplexMethod", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:WebExtensionReducer.kt$WebExtensionReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:WebPush.kt$WebPushSubscription$@Suppress("BracesOnIfStatements", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:WorkManagerSyncManager.kt$WorkManagerSyncWorker$@Suppress("LongMethod", "ComplexMethod")</ID>
     <ID>MaxLineLength:ContextCompatDetector.kt$ContextCompatDetector.Companion$explanation = "Using this method can lead to crashes in older Android versions as newer features might not be available"</ID>
     <ID>MayBeConst:ConstraintLayoutPerfDetector.kt$private val CUSTOM_VIEW_ISSUE_DESCRIPTION = "Caution regarding custom views extending `ConstraintLayout`"</ID>
     <ID>MayBeConst:ConstraintLayoutPerfDetector.kt$private val CUSTOM_VIEW_ISSUE_MESSAGE = "Custom views extending `ConstraintLayout` are less " + "efficient because they cannot share other `ConstraintLayout` defined in file."</ID>

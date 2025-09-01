@@ -1,7 +1,139 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>ForbiddenSuppression:AccountSettingsFragment.kt$AccountSettingsFragment$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:AddonMenuItem.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AddonPermissionsDetailsFragment.kt$AddonPermissionsDetailsFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AddonPermissionsScreen.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:AddonPopupBaseFragment.kt$AddonPopupBaseFragment$@Suppress("DEPRECATION", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:AppStoreReducer.kt$AppStoreReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:AwesomeBarComposable.kt$AwesomeBarComposable$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BaseBrowserFragment.kt$BaseBrowserFragment$@Suppress("ComplexMethod", "LongMethod", "DEPRECATION")</ID>
+    <ID>ForbiddenSuppression:BaseBrowserFragment.kt$BaseBrowserFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BlocklistMiddleware.kt$BlocklistMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarkFragment.kt$BookmarkFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksMiddleware.kt$BookmarksMiddleware$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksMiddleware.kt$BookmarksMiddleware$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksReducer.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksScreen.kt$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BookmarksTelemetryMiddleware.kt$BookmarksTelemetryMiddleware$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserFragment.kt$BrowserFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarCFRPresenter.kt$BrowserToolbarCFRPresenter$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarMenuController.kt$DefaultBrowserToolbarMenuController$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarMiddleware.kt$BrowserToolbarMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarSearchMiddleware.kt$BrowserToolbarSearchMiddleware$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:BrowserToolbarStoreBuilder.kt$BrowserToolbarStoreBuilder$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:CfrTools.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CfrToolsPreferencesMiddleware.kt$CfrToolsPreferencesMiddleware$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CfrToolsStore.kt$CfrToolsReducer$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Collection.kt$@Suppress("LongMethod", "Deprecation")</ID>
+    <ID>ForbiddenSuppression:ContentRecommendationsReducer.kt$ContentRecommendationsReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CustomTabBrowserToolbarMiddleware.kt$CustomTabBrowserToolbarMiddleware$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:CustomTabMenu.kt$@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:DebugDrawerRoute.kt$DebugDrawerRoute.Companion$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:DebugOverlay.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DeleteBrowsingDataOnQuitFragment.kt$DeleteBrowsingDataOnQuitFragment$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:DohSettingsNavHost.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DohSettingsScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadLanguageFileDialog.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadLanguagesPreference.kt$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadLanguagesPreference.kt$@Suppress("MagicNumber", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadUIStore.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:DownloadsScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:EditBookmarkFragment.kt$EditBookmarkFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ExternalAppBrowserFragment.kt$ExternalAppBrowserFragment$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:FenixApplication.kt$FenixApplication$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:FenixApplication.kt$FenixApplication$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:GleanDebugToolsScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:HistoryAdapter.kt$HistoryAdapter$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HistoryFragment.kt$HistoryFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:HistoryMetadataMiddleware.kt$HistoryMetadataMiddleware$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeActivity.kt$HomeActivity$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeActivity.kt$HomeActivity$@SuppressWarnings("TooManyFunctions", "LargeClass", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:HomeDeepLinkIntentProcessor.kt$HomeDeepLinkIntentProcessor$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeFragment.kt$HomeFragment$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeFragment.kt$HomeFragment$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeMenu.kt$HomeMenu$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:HomeMenu.kt$HomeMenu$@Suppress("LargeClass", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:HomeMenuView.kt$HomeMenuView$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Homepage.kt$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:InfoCard.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:InstalledAddonDetailsFragment.kt$InstalledAddonDetailsFragment$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ListItem.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:LoginsMiddleware.kt$LoginsMiddleware$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:MainMenu.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:MainMenu.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:MainMenu.kt$@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:MarketingDataOnboardingPage.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:Menu.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:MenuDialogFragment.kt$MenuDialogFragment$@Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")</ID>
+    <ID>ForbiddenSuppression:MenuNavigationMiddleware.kt$MenuNavigationMiddleware$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:MenuTelemetryMiddleware.kt$MenuTelemetryMiddleware$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:MessageCard.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:MetricController.kt$ReleaseMetricController$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:MiddleSearchHomepage.kt$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:MozillaAccountMenuItem.kt$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:OnboardingFragment.kt$OnboardingFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:OnboardingPage.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:OnboardingScreen.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:OnboardingScreenRedesign.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:OnboardingTelemetryRecorder.kt$OnboardingTelemetryRecorder$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:PhoneFeature.kt$PhoneFeature$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:PocketStoriesComposables.kt$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:ProfilerStartDialogFragment.kt$ProfilerStartDialogFragment$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:ProtectionPanel.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:RecentSyncedTab.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:RecentTabs.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:RegionTools.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SaveSearchEngineFragment.kt$SaveSearchEngineFragment$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SavedLoginsAuthFragment.kt$SavedLoginsAuthFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SavedLoginsFragment.kt$SavedLoginsFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SavedLoginsScreen.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchDialogFragment.kt$SearchDialogFragment$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchDialogFragment.kt$SearchDialogFragment$@SuppressWarnings("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SearchEngineFragment.kt$SearchEngineFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchEngineShortcuts.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchFragmentStore.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SearchSuggestionsProvidersBuilder.kt$SearchSuggestionsProvidersBuilder$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:SecretSettingsFragment.kt$SecretSettingsFragment$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:SettingsFragment.kt$SettingsFragment$@Suppress("ComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:Snackbar.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:SnackbarBinding.kt$SnackbarBinding$@Suppress("LongMethod", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:Stories.kt$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:SyncedTabsList.kt$@SuppressWarnings("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabGridItem.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabLayout.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabListItem.kt$@Suppress("LongMethod", "LongParameterList")</ID>
+    <ID>ForbiddenSuppression:TabManagementFragment.kt$TabManagementFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabPreview.kt$TabPreview$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabStrip.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabTools.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTray.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTray.kt$@Suppress("LongMethod", "LongParameterList", "ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTrayBanner.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTrayBanner.kt$@Suppress("LongMethod", "LongParameterList")</ID>
+    <ID>ForbiddenSuppression:TabsTrayBanner.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTrayFragment.kt$TabsTrayFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TabsTrayTabLayouts.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:TelemetryMiddleware.kt$TelemetryMiddleware$@Suppress("TooGenericExceptionCaught", "ComplexMethod", "NestedBlockDepth", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:ThemeOnboardingPage.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TopSites.kt$@Suppress("LongMethod", "LongParameterList", "Deprecation")</ID>
+    <ID>ForbiddenSuppression:TopSites.kt$@Suppress("LongParameterList", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:TrackingProtectionPolicyFactory.kt$TrackingProtectionPolicyFactory$@Suppress("ComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationSettings.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsBinding.kt$TranslationsBinding$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsDialogBinding.kt$TranslationsDialogBinding$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsDialogFragment.kt$TranslationsDialogFragment$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsDialogMiddleware.kt$TranslationsDialogMiddleware$@Suppress("LongMethod", "CyclomaticComplexMethod")</ID>
+    <ID>ForbiddenSuppression:TranslationsDialogStore.kt$TranslationsDialogReducer$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:TrustPanelFragment.kt$TrustPanelFragment$@Suppress("LongMethod", "MagicNumber")</ID>
+    <ID>ForbiddenSuppression:TrustPanelNavigationMiddleware.kt$TrustPanelNavigationMiddleware$@Suppress("CyclomaticComplexMethod", "LongMethod")</ID>
+    <ID>ForbiddenSuppression:UnsubmittedCrashDialog.kt$@Suppress("LongMethod")</ID>
+    <ID>ForbiddenSuppression:WebCompatReporter.kt$@Suppress("LongMethod")</ID>
     <ID>UndocumentedPublicClass:AboutFragment.kt$AboutFragment$Companion</ID>
     <ID>UndocumentedPublicClass:AboutItem.kt$AboutItem</ID>
     <ID>UndocumentedPublicClass:AboutItem.kt$AboutItem$Crashes : AboutItem</ID>
