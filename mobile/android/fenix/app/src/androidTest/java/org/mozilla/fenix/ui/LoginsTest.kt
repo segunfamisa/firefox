@@ -210,7 +210,6 @@ class LoginsTest : TestSetup() {
     // TestRail link: https://mozilla.testrail.io/index.php?/cases/view/1508171
     @SmokeTest
     @Test
-    @SkipLeaks
     fun verifyUpdatedLoginIsSavedTest() {
         val saveLoginTest =
             TestAssetHelper.getSaveLoginAsset(mockWebServer)
