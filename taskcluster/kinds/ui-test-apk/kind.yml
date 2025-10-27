@@ -321,6 +321,8 @@ tasks:
                 - [wget, {artifact-reference: '<signed-apk-debug-apk/public/build/target.arm64-v8a.apk>'}, '-O', app.apk]
                 - [wget, {artifact-reference: '<signed-apk-android-test/public/build/target.noarch.apk>'}, '-O', android-test.apk]
                 - [python3, taskcluster/scripts/tests/test-lab.py, fenix/arm64-v8a-detect-leaks.yml, app.apk, --apk_test, android-test.apk]
+                - [mkdir, -p, /builds/worker/artifacts/build]
+                - [python3, taskcluster/scripts/tests/copy-artifacts-from-ftl.py, "memory_leaks"]
         treeherder:
             platform: 'fenix-android-all/opt'
             symbol: fenix-debug(detect-leaks-arm)
