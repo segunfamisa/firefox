@@ -162,6 +162,9 @@ public class GeckoSession {
   private TranslationsController.SessionTranslation mTranslations =
       new TranslationsController.SessionTranslation(this);
 
+  /** Session page extractor. Initialized once, in {@link #getSessionPageExtractor()} */
+  private PageExtractionController.SessionPageExtractor mPageExtractor;
+
   /** {@code SessionMagnifier} handles magnifying glass. */
   /* package */ interface SessionMagnifier {
     /**
@@ -3608,6 +3611,19 @@ public class GeckoSession {
   public @Nullable TranslationsController.SessionTranslation.Delegate
       getTranslationsSessionDelegate() {
     return mTranslationsHandler.getDelegate();
+  }
+
+  /**
+   * Get the page extractor for this GeckoSession.
+   *
+   * @return The current page extractor session coordinator.
+   */
+  @AnyThread
+  public @NonNull PageExtractionController.SessionPageExtractor getSessionPageExtractor() {
+    if (mPageExtractor == null) {
+      mPageExtractor = new PageExtractionController.SessionPageExtractor(this);
+    }
+    return mPageExtractor;
   }
 
   /**
