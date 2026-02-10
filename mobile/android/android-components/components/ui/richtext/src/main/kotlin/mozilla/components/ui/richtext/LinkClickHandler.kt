@@ -5,13 +5,12 @@
 package mozilla.components.ui.richtext
 
 /**
- * An example class.
+ * Handler for handling link clicks
  */
-class Example {
+fun interface LinkClickHandler {
+
     /**
-     * An example function.
+     * Function invoked when a url is clicked
      */
-    fun hello(user: String): String {
-        return "hello $user"
-    }
+    fun onClick(url: String)
 }
