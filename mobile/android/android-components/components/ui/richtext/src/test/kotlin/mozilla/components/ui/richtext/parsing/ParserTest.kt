@@ -26,10 +26,8 @@ internal class ParserTest(val testCase: ParserTestCase) {
 
         assertEquals(
             """
-                Failed case: ${testCase.description}
-                
+                Failed case: ${testCase.description}              
                 To debug, you can create the following test class:
-
                 class SingleTest {
 
                     @Test
