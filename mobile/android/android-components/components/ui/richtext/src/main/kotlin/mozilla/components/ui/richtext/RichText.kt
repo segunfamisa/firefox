@@ -87,7 +87,6 @@ private val SampleText = """
        - Mixed nesting
        - With **bold text**
     3. Third item
-    
     > Block quote
     >
     > First paragraph
