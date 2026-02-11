@@ -29,7 +29,7 @@ internal class ParserTest(val testCase: ParserTestCase) {
                 Failed case: ${testCase.description}
                 
                 To debug, you can create the following test class:
-                
+
                 class SingleTest {
 
                     @Test
