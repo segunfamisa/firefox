@@ -95,6 +95,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -129,11 +130,13 @@ import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.telemetry.glean.private.NoExtras
 import org.mozilla.fenix.Config
 import org.mozilla.fenix.GleanMetrics.BookmarksManagement
+import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.BOOKMARK_TOOLBAR
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD
 import org.mozilla.fenix.components.AppStore
+import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.components
 import org.mozilla.fenix.compose.Favicon
@@ -177,10 +180,68 @@ internal fun BookmarksScreen(
     useNewSearchUX: Boolean = false,
     profiler: Profiler? = components.core.engine.profiler,
     startDestination: String = BookmarksDestinations.LIST,
+    fragmentNavController: NavController? = null,
 ) {
     val navController = rememberNavController()
     val store = buildStore(navController)
+    LaunchedEffect(Unit) {
+        store.eventsFlow
+            .collect {
+                when(it) {
+                    BookmarksEvent.Navigate.AddFolder -> {
+                        navController.navigate(BookmarksDestinations.ADD_FOLDER)
+                    }
 
+                    BookmarksEvent.Navigate.EditBookmark -> {
+                        navController.navigate(BookmarksDestinations.EDIT_BOOKMARK)
+                    }
+
+                    BookmarksEvent.Navigate.PopToBookmarkList -> {
+                        navController.popBackStack(
+                            BookmarksDestinations.LIST,
+                            false,
+                        )
+                    }
+                    BookmarksEvent.Navigate.PopToEditBookmark -> {
+                        navController.popBackStack(
+                            BookmarksDestinations.EDIT_BOOKMARK,
+                            inclusive = false,
+                        )
+                    }
+
+                    BookmarksEvent.Navigate.GoBack -> {
+                        navController.popBackStack()
+                    }
+                    BookmarksEvent.Navigate.GoBackOrExitBookmarks -> {
+                        if(!navController.popBackStack()) {
+                            fragmentNavController?.navigate(R.id.browserFragment)
+                        }
+                    }
+
+                    BookmarksEvent.Navigate.SelectFolder -> {
+                        navController.navigate(BookmarksDestinations.SELECT_FOLDER)
+                    }
+
+                    BookmarksEvent.Navigate.ToBrowser -> {
+                        fragmentNavController?.navigate(R.id.browserFragment)
+                    }
+
+                    BookmarksEvent.Navigate.ToSearch -> {
+                        fragmentNavController?.navigate(
+                            NavGraphDirections.actionGlobalSearchDialog(sessionId = null),
+                        )
+                    }
+
+                    BookmarksEvent.Navigate.ToSyncSignIn -> {
+                        fragmentNavController?.navigate(
+                            BookmarkFragmentDirections.actionGlobalTurnOnSync(
+                                entrypoint = FenixFxAEntryPoint.BookmarkView,
+                            ),
+                        )
+                    }
+                }
+            }
+    }
     val isPrivateModeLocked by remember {
         appStore.stateFlow.map { appState -> appState.isPrivateScreenLocked }
     }.collectAsState(initial = appStore.state.isPrivateScreenLocked)
@@ -1124,8 +1185,8 @@ private fun FolderListItem(
     } else {
         Box(
             modifier = Modifier
-            .padding(start = if (!showPadding) folder.startPadding else 0.dp)
-            .width(FirefoxTheme.layout.size.containerMaxWidth),
+                .padding(start = if (!showPadding) folder.startPadding else 0.dp)
+                .width(FirefoxTheme.layout.size.containerMaxWidth),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when (folder.expansionState) {

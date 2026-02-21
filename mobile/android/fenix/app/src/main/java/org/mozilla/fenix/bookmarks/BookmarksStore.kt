@@ -4,9 +4,10 @@
 
 package org.mozilla.fenix.bookmarks
 
+import mozilla.components.lib.state.EventMiddleware
+import mozilla.components.lib.state.EventStore
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Reducer
-import mozilla.components.lib.state.Store
 
 /**
  * A Store for handling [BookmarksState] and dispatching [BookmarksAction].
@@ -19,13 +20,14 @@ import mozilla.components.lib.state.Store
 internal class BookmarksStore(
     initialState: BookmarksState = BookmarksState.default,
     reducer: Reducer<BookmarksState, BookmarksAction> = ::bookmarksReducer,
-    middleware: List<Middleware<BookmarksState, BookmarksAction>> = listOf(),
+    middleware: List<EventMiddleware<BookmarksState, BookmarksAction, BookmarksEvent>> = listOf(),
     bookmarkToLoad: String? = null,
-) : Store<BookmarksState, BookmarksAction>(
+) : EventStore<BookmarksState, BookmarksAction, BookmarksEvent>(
     initialState = initialState,
     reducer = reducer,
     middleware = middleware,
 ) {
+
     init {
         val action = bookmarkToLoad?.let { InitEdit(bookmarkToLoad) } ?: Init
         dispatch(action)

@@ -26,11 +26,9 @@ import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.store.Mode
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
-import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
 import org.mozilla.fenix.components.QrScanFenixFeature
 import org.mozilla.fenix.components.VoiceSearchFeature
-import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.search.BOOKMARKS_SEARCH_ENGINE_ID
@@ -125,24 +123,7 @@ class BookmarkFragment : Fragment() {
                                     navController
                                         .previousBackStackEntry?.destination?.id == R.id.homeFragment
                                 },
-                                getNavController = { composeNavController },
                                 exitBookmarks = { navController.popBackStack() },
-                                navigateToBrowser = {
-                                    navController.navigate(R.id.browserFragment)
-                                },
-                                navigateToSearch = {
-                                    navController.navigate(
-                                        NavGraphDirections.actionGlobalSearchDialog(sessionId = null),
-                                    )
-                                },
-                                navigateToSignIntoSync = {
-                                    navController
-                                        .navigate(
-                                            BookmarkFragmentDirections.actionGlobalTurnOnSync(
-                                                entrypoint = FenixFxAEntryPoint.BookmarkView,
-                                            ),
-                                        )
-                                },
                                 shareBookmarks = { bookmarks ->
                                     navController.nav(
                                         R.id.bookmarkFragment,
@@ -189,6 +170,7 @@ class BookmarkFragment : Fragment() {
                         bookmarksSearchEngine = requireComponents.core.store.state.search.searchEngines
                             .firstOrNull { it.id == BOOKMARKS_SEARCH_ENGINE_ID },
                         useNewSearchUX = settings().shouldUseComposableToolbar,
+                        fragmentNavController = this@BookmarkFragment.findNavController()
                     )
                 }
             }

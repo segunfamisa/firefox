@@ -11,12 +11,15 @@ sealed interface BookmarksEvent : Event {
         data object AddFolder : Navigate
         data object SelectFolder : Navigate
 
-        data object EditBookmark: Navigate
+        data object EditBookmark : Navigate
 
-        data object PopToEditBookmark: Navigate
-        data object PopToBookmarkList: Navigate
+        data object PopToEditBookmark : Navigate
+        data object PopToBookmarkList : Navigate
 
-        data object GoBack: Navigate
-        data object GoBackOrExitBookmarks: Navigate
+        data object GoBack : Navigate
+        data object GoBackOrExitBookmarks : Navigate
+        data object ToBrowser : Navigate
+        data object ToSearch : Navigate
+        data object ToSyncSignIn : Navigate
     }
 }

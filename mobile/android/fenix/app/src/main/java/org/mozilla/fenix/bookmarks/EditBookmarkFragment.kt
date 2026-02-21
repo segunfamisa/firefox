@@ -21,7 +21,6 @@ import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.store.Mode
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import org.mozilla.fenix.R
-import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.ext.bookmarkStorage
 import org.mozilla.fenix.ext.nav
@@ -72,20 +71,7 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                                     } else {
                                         appStore.state.mode.isPrivate
                                     },
-                                    getNavController = { composeNavController },
                                     exitBookmarks = { navController.popBackStack() },
-                                    navigateToBrowser = {
-                                        navController.navigate(R.id.browserFragment)
-                                    },
-                                    navigateToSearch = { },
-                                    navigateToSignIntoSync = {
-                                        navController
-                                            .navigate(
-                                                BookmarkFragmentDirections.actionGlobalTurnOnSync(
-                                                    entrypoint = FenixFxAEntryPoint.BookmarkView,
-                                                ),
-                                            )
-                                    },
                                     shareBookmarks = { bookmarks ->
                                         navController.nav(
                                             R.id.bookmarkFragment,
@@ -129,6 +115,7 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark) {
                             toolbarStore = BrowserToolbarStore(BrowserToolbarState(mode = Mode.EDIT)),
                             searchStore = SearchFragmentStore(SearchFragmentState.EMPTY),
                             bookmarksSearchEngine = null,
+                            fragmentNavController = this@EditBookmarkFragment.findNavController(),
                         )
                     }
                 }
