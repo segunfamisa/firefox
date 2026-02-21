@@ -6,12 +6,42 @@ package mozilla.components.lib.state
 
 import androidx.annotation.CheckResult
 import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.lang.ref.WeakReference
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+
+
+interface Event
+
+open class EventStore<S : State, A : Action, E : Event>(
+    initialState: S,
+    reducer: Reducer<S, A>,
+    middleware: List<EventMiddleware<S, A, E>> = emptyList(),
+) : Store<S, A>(initialState, reducer, middleware as List<Middleware<S, A>>) {
+
+    private val _eventsFlow = MutableSharedFlow<E>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val eventsFlow: SharedFlow<E>
+        get() = _eventsFlow
+
+    fun dispatchEvent(event: E) {
+//        synchronized(this) {
+            _eventsFlow.tryEmit(event)
+//        }
+    }
+}
+
+typealias EventMiddleware<S, A, E> = (store: EventStore<S, A, E>, next: (A) -> Unit, action: A) -> Unit
+
 
 /**
  * A generic store holding an immutable [State].
@@ -31,7 +61,8 @@ open class Store<S : State, A : Action>(
     private var reducerChain: ((A) -> Unit)? = null
 
     @VisibleForTesting
-    internal val subscriptions = Collections.newSetFromMap(ConcurrentHashMap<Subscription<S, A>, Boolean>())
+    internal val subscriptions =
+        Collections.newSetFromMap(ConcurrentHashMap<Subscription<S, A>, Boolean>())
 
     private val mutableStateFlow = MutableStateFlow(initialState)
 
