@@ -9,8 +9,13 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,9 +34,14 @@ import mozilla.components.compose.browser.toolbar.concept.Action.SearchSelectorA
 import mozilla.components.compose.browser.toolbar.concept.Action.SearchSelectorAction.Icon.DrawableIcon
 import mozilla.components.compose.browser.toolbar.concept.Action.SearchSelectorAction.Icon.DrawableResIcon
 import mozilla.components.compose.browser.toolbar.concept.Action.TabCounterAction
+import mozilla.components.compose.browser.toolbar.concept.ActionCfrProperties
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarInteraction.BrowserToolbarEvent
 import mozilla.components.compose.browser.toolbar.ui.SearchSelector
 import mozilla.components.compose.browser.toolbar.ui.TabCounter
+import mozilla.components.compose.cfr.Cfr
+import mozilla.components.compose.cfr.CfrBox
+import mozilla.components.compose.cfr.rememberCfrPositionProvider
+import mozilla.components.compose.cfr.rememberCfrState
 import mozilla.components.compose.browser.toolbar.ui.ActionButton as ActionButtonComposable
 import mozilla.components.ui.icons.R as iconsR
 
@@ -56,56 +66,119 @@ fun ActionContainer(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         for (action in actions) {
-            when (action) {
-                is ActionButtonRes -> {
-                    action.iconDrawable()?.let {
-                        ActionButtonComposable(
-                            icon = it,
-                            contentDescription = stringResource(action.contentDescription),
-                            state = action.state,
-                            onClick = action.onClick,
-                            highlighted = action.highlighted,
-                            onLongClick = action.onLongClick,
-                            onInteraction = { onInteraction(it) },
-                        )
-                    }
-                }
+            // optionally wrap the action in a CfrBox if it contains CFR data
+            action.cfrProperties?.let { cfrProperties ->
+                ActionContentWithCFR(cfr = cfrProperties, onInteraction = onInteraction, action = action)
+            } ?: ActionContent(action = action, onInteraction = onInteraction)
+        }
+    }
+}
 
-                is ActionButton -> {
-                    action.iconDrawable()?.let {
-                        ActionButtonComposable(
-                            icon = it,
-                            contentDescription = action.contentDescription,
-                            state = action.state,
-                            onClick = action.onClick,
-                            highlighted = action.highlighted,
-                            onLongClick = action.onLongClick,
-                            onInteraction = { onInteraction(it) },
-                        )
-                    }
-                }
-
-                is SearchSelectorAction -> {
-                    SearchSelector(
-                        icon = action.iconDrawable(),
-                        shouldTint = (action.icon as? DrawableIcon)?.shouldTint ?: true,
-                        contentDescription = action.contentDescription(),
-                        menu = action.menu,
-                        onInteraction = { onInteraction(it) },
-                        onClick = action.onClick,
+/**
+ * Wrap the [ActionContent] with a [CfrBox] so that we can display a CFR
+ */
+@Composable
+@OptIn(ExperimentalMaterial3Api::class) // rememberCfrState, rememberCfrPositionProvider
+private fun ActionContentWithCFR(
+    cfr: ActionCfrProperties,
+    onInteraction: (BrowserToolbarEvent) -> Unit,
+    action: Action,
+) {
+    val state = rememberCfrState()
+    CfrBox(
+        state = state,
+        positionProvider = rememberCfrPositionProvider(cfr.indicatorDirection),
+        cfr = {
+            Cfr(
+                modifier = Modifier,
+                showDismissButton = cfr.showDismissButton,
+                onDismiss = {
+                    state.dismiss()
+                    cfr.onDismiss?.let { onInteraction(it) }
+                },
+                text = {
+                    Text(
+                        text = when (cfr.message) {
+                            is ActionCfrProperties.Text.StringResText -> stringResource(cfr.message.resourceId)
+                            is ActionCfrProperties.Text.StringText -> cfr.message.text
+                        },
                     )
-                }
+                },
+            )
+        },
+        onDismissRequest = {
+            state.dismiss()
+            cfr.onDismiss?.let { onInteraction(it) }
+        },
+    ) {
+        ActionContent(action = action, onInteraction = onInteraction)
+    }
 
-                is TabCounterAction -> {
-                    TabCounter(
-                        count = action.count,
-                        showPrivacyMask = action.showPrivacyMask,
-                        onClick = action.onClick,
-                        onLongClick = action.onLongClick,
-                        onInteraction = { onInteraction(it) },
-                    )
-                }
+    // show the cfr on composition
+    LaunchedEffect(Unit) {
+        cfr.onShow?.let { onInteraction(it) }
+        state.show()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            state.onDispose()
+        }
+    }
+}
+
+@Composable
+private fun ActionContent(
+    action: Action,
+    onInteraction: (BrowserToolbarEvent) -> Unit,
+) {
+    when (action) {
+        is ActionButtonRes -> {
+            action.iconDrawable()?.let {
+                ActionButtonComposable(
+                    icon = it,
+                    contentDescription = stringResource(action.contentDescription),
+                    state = action.state,
+                    onClick = action.onClick,
+                    highlighted = action.highlighted,
+                    onLongClick = action.onLongClick,
+                    onInteraction = { event -> onInteraction(event) },
+                )
             }
+        }
+
+        is ActionButton -> {
+            action.iconDrawable()?.let {
+                ActionButtonComposable(
+                    icon = it,
+                    contentDescription = action.contentDescription,
+                    state = action.state,
+                    onClick = action.onClick,
+                    highlighted = action.highlighted,
+                    onLongClick = action.onLongClick,
+                    onInteraction = { event -> onInteraction(event) },
+                )
+            }
+        }
+
+        is SearchSelectorAction -> {
+            SearchSelector(
+                icon = action.iconDrawable(),
+                shouldTint = (action.icon as? DrawableIcon)?.shouldTint ?: true,
+                contentDescription = action.contentDescription(),
+                menu = action.menu,
+                onInteraction = { onInteraction(it) },
+                onClick = action.onClick,
+            )
+        }
+
+        is TabCounterAction -> {
+            TabCounter(
+                count = action.count,
+                showPrivacyMask = action.showPrivacyMask,
+                onClick = action.onClick,
+                onLongClick = action.onLongClick,
+                onInteraction = { onInteraction(it) },
+            )
         }
     }
 }

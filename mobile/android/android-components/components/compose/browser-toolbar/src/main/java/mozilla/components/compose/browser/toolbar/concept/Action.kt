@@ -10,11 +10,18 @@ import androidx.annotation.StringRes
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarInteraction
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarInteraction.BrowserToolbarEvent
 import mozilla.components.compose.browser.toolbar.store.BrowserToolbarInteraction.BrowserToolbarMenu
+import mozilla.components.compose.cfr.CFRPopup.IndicatorDirection
 
 /**
  * Actions that can be added to the toolbar.
  */
 sealed class Action {
+
+    /**
+     * Optional [ActionCfrProperties] information to show a CFR anchored to this action
+     */
+    abstract val cfrProperties: ActionCfrProperties?
+
     /**
      * An action button to be added to the toolbar that can be configures with resource ids.
      *
@@ -25,6 +32,7 @@ sealed class Action {
      * @property onClick [BrowserToolbarInteraction] describing how to handle this button being clicked.
      * @property onLongClick Optional [BrowserToolbarInteraction] describing how to handle this button
      * being long clicked.
+     * @property cfrProperties Optional [ActionCfrProperties] information to show a CFR anchored to this action
      */
     data class ActionButtonRes(
         @param:DrawableRes val drawableResId: Int,
@@ -33,6 +41,7 @@ sealed class Action {
         val highlighted: Boolean = false,
         val onClick: BrowserToolbarInteraction,
         val onLongClick: BrowserToolbarInteraction? = null,
+        override val cfrProperties: ActionCfrProperties? = null,
     ) : Action()
 
     /**
@@ -55,6 +64,7 @@ sealed class Action {
         val highlighted: Boolean = false,
         val onClick: BrowserToolbarInteraction,
         val onLongClick: BrowserToolbarInteraction? = null,
+        override val cfrProperties: ActionCfrProperties? = null,
     ) : Action() {
 
         /**
@@ -75,12 +85,14 @@ sealed class Action {
      * @property contentDescription A [String] or [StringRes] to use as content description for this button.
      * @property menu The [BrowserToolbarMenu] to show when this button is clicked.
      * @property onClick Optional [BrowserToolbarEvent] to be dispatched when this button is clicked.
+     * @property cfrProperties Optional [ActionCfrProperties] information to show a CFR anchored to this action
      */
     data class SearchSelectorAction(
         val icon: Icon,
         val contentDescription: ContentDescription,
         val menu: BrowserToolbarMenu,
         val onClick: BrowserToolbarEvent?,
+        override val cfrProperties: ActionCfrProperties? = null,
     ) : Action() {
 
         /**
@@ -158,6 +170,7 @@ sealed class Action {
      * @property onClick [BrowserToolbarEvent] to be dispatched when this button is clicked.
      * @property onLongClick Optional [BrowserToolbarInteraction] describing how to handle this button
      * being long clicked.
+     * @property cfrProperties Optional [ActionCfrProperties] information to show a CFR anchored to this action
      */
     data class TabCounterAction(
         val count: Int,
@@ -165,5 +178,45 @@ sealed class Action {
         val showPrivacyMask: Boolean,
         val onClick: BrowserToolbarEvent,
         val onLongClick: BrowserToolbarInteraction? = null,
+        override val cfrProperties: ActionCfrProperties? = null,
     ) : Action()
+}
+
+/**
+ * CFR properties for an action
+ *
+ * @property title Optional title of the CFR
+ * @property message Message of the CFR
+ * @property onShow A [BrowserToolbarEvent] triggered when the CFR is shown
+ * @property onDismiss A [BrowserToolbarEvent] triggered when the CFR is dismissed
+ * @property indicatorDirection The indicator direction for the CFR
+ * @property showDismissButton Whether or not to show the dismiss button on the CFR
+ */
+data class ActionCfrProperties(
+    val title: Text? = null,
+    val message: Text,
+    val onShow: BrowserToolbarEvent? = null,
+    val onDismiss: BrowserToolbarEvent? = null,
+    val indicatorDirection: IndicatorDirection = IndicatorDirection.UP,
+    val showDismissButton: Boolean = true,
+) {
+
+    /**
+     * Text type for CFR data
+     */
+    sealed interface Text {
+        /**
+         * The [String] to display in this CFR
+         */
+        @JvmInline
+        value class StringText(val text: String) : Text
+
+        /**
+         * The [StringRes] to display as text in this menu item.
+         */
+        @JvmInline
+        value class StringResText(
+            @param:StringRes val resourceId: Int,
+        ) : Text
+    }
 }
