@@ -34,6 +34,9 @@ class FenixSummarizeFeatureDiscoverySettings(
     override val shouldHighlightOverflowMenuItem: Boolean
         get() = canShowFeature && settings.shakeToSummarizeMoreMenuItemInteractionCount.underMaxCount()
 
+    override val shouldToolbarShowCfr: Boolean
+        get() = canShowFeature && !settings.shakeToSummarizeToolbarCfrShown
+
     /**
      * We determine if we should highlight the toolbar by checking the feature flags &
      * checking the number of interactions
@@ -47,6 +50,7 @@ class FenixSummarizeFeatureDiscoverySettings(
 
     override fun cacheDiscoveryEvent(event: SummarizeDiscoveryEvent) {
         when (event) {
+            SummarizeDiscoveryEvent.CfrExposure -> recordCfrExposure()
             SummarizeDiscoveryEvent.MenuItemExposure -> recordMenuItemExposure()
             SummarizeDiscoveryEvent.MenuOverflowInteraction -> recordMenuOverflowItemInteraction()
             SummarizeDiscoveryEvent.ToolbarOverflowInteraction -> recordToolbarOverflowMenuInteraction()
@@ -56,6 +60,12 @@ class FenixSummarizeFeatureDiscoverySettings(
     private fun recordMenuItemExposure() {
         if (canShowFeature && settings.shakeToSummarizeMenuItemExposureCount.underMaxCount()) {
             settings.shakeToSummarizeMenuItemExposureCount.increment()
+        }
+    }
+
+    private fun recordCfrExposure() {
+        if (canShowFeature && !settings.shakeToSummarizeToolbarCfrShown) {
+            settings.shakeToSummarizeToolbarCfrShown = true
         }
     }
 

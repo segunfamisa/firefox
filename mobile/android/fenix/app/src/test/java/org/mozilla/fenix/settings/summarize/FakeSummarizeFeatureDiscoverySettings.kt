@@ -27,11 +27,14 @@ class FakeSummarizeFeatureDiscoverySettings(
     override val toolbarMenuButtonHighlight: StateFlow<Boolean>
         get() = MutableStateFlow(expectedToolbarMenuButtonHighlight)
 
+    override var shouldToolbarShowCfr: Boolean = false
+
     override fun cacheDiscoveryEvent(event: SummarizeDiscoveryEvent) {
         when (event) {
             SummarizeDiscoveryEvent.MenuItemExposure -> menuItemExposureCount++
             SummarizeDiscoveryEvent.MenuOverflowInteraction -> menuOverflowInteractionCount++
             SummarizeDiscoveryEvent.ToolbarOverflowInteraction -> toolbarOverflowMenuInteractionCount++
+            SummarizeDiscoveryEvent.CfrExposure -> shouldToolbarShowCfr = true
         }
     }
 }

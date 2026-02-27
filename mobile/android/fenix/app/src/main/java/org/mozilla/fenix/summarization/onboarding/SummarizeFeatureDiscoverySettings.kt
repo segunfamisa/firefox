@@ -28,6 +28,11 @@ interface SummarizeFeatureDiscoverySettings {
     val shouldHighlightOverflowMenuItem: Boolean
 
     /**
+     * Indicates whether the toolbar CFR for the feature should be shown
+     */
+    val shouldToolbarShowCfr: Boolean
+
+    /**
      * Reactive state that indicates whether the three-dot menu button in the toolbar should be highlighted.
      *
      * It is a [StateFlow] because, unlike the rest, we require instant changes in this to reflect
@@ -51,6 +56,11 @@ sealed interface SummarizeDiscoveryEvent {
      * Event for the menu item being exposed to the user
      */
     data object MenuItemExposure : SummarizeDiscoveryEvent
+
+    /**
+     * Event for the CFR being shown to the user
+     */
+    data object CfrExposure : SummarizeDiscoveryEvent
 
     /**
      * Event for the menu overflow/"more" item interaction
