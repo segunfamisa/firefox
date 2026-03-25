@@ -13,7 +13,6 @@ import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.map
 import mozilla.components.concept.accelerometer.Accelerometer
 import mozilla.components.support.base.log.logger.Logger
 
@@ -34,7 +33,7 @@ class LifecycleAwareSensorManagerAccelerometer(
 ) : Accelerometer, SensorEventListener, DefaultLifecycleObserver {
 
     private val sensor: Sensor? by lazy {
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
     }
 
     private val _samples = MutableSharedFlow<Accelerometer.Sample>(
@@ -42,7 +41,7 @@ class LifecycleAwareSensorManagerAccelerometer(
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
 
-    override fun samples(): Flow<Accelerometer.Sample> = _samples.map(::normalizeForGravity)
+    override fun samples(): Flow<Accelerometer.Sample> = _samples
 
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
 
@@ -67,10 +66,4 @@ class LifecycleAwareSensorManagerAccelerometer(
         logger("Unregistering self as sensor listener")
         sensorManager.unregisterListener(this)
     }
-
-    private fun normalizeForGravity(sample: Accelerometer.Sample) = sample.copy(
-        xAccel = sample.xAccel / SensorManager.GRAVITY_EARTH,
-        yAccel = sample.yAccel / SensorManager.GRAVITY_EARTH,
-        zAccel = sample.zAccel / SensorManager.GRAVITY_EARTH,
-    )
 }
