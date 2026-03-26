@@ -24,7 +24,7 @@ import kotlin.math.sqrt
  *
  * @param sensitivity The [ShakeSensitivity] of the detection. This determines how much effort is
  * required to trigger a shake
- * @param detectionWindow The time in nanoseconds during which the movements and hits are observed to
+ * @param detectionWindowNs The time in nanoseconds during which the movements and hits are observed to
  * determine a shake gesture
  * @param cooldownPeriodNs The time in nanoseconds after a shake is detected. Any movement or shake that happens
  * during this period is ignored
@@ -33,7 +33,7 @@ import kotlin.math.sqrt
  */
 fun Accelerometer.detectShakes(
     sensitivity: ShakeSensitivity = Medium,
-    detectionWindow: Long = 350_000_000L,
+    detectionWindowNs: Long = 350_000_000L,
     cooldownPeriodNs: Long = 800_000_000L,
     minHits: Int = 2,
 ): Flow<Unit> =
@@ -42,7 +42,7 @@ fun Accelerometer.detectShakes(
             state.next(
                 sample = sample,
                 sensitivity = sensitivity,
-                detectionWindowNs = detectionWindow,
+                detectionWindowNs = detectionWindowNs,
                 cooldownPeriodNs = cooldownPeriodNs,
                 minHits = minHits,
             )
@@ -125,7 +125,7 @@ private data class ShakeState(
         val timestampNs = sample.timestampNs
 
         // Step 1: Check if acceleration magnitude is below the threshold.
-        // If it is below, reset detection state and wait for stronger acceleration.
+        // If it is below, return and wait for stronger hit.
         if (magnitude < sensitivity.threshold) return copy(hasReachedMinHits = false)
 
         // Step 2: Check the approximate shake direction based on the most dominant acceleration
@@ -133,16 +133,16 @@ private data class ShakeState(
         val shakeDirectionChanged = currentShakeDirection != lastShakeDirection
 
         // Step 3: Manage the rolling time window for counting acceleration spikes.
-        // Either start a new window (if no window exists or previous window expired)
-        // or continue the current window and increment the hit counter.
+        // Either:
+        // - start a new window (if no window exists or previous window expired)
+        // - continue the current window and increment the hit counter if the shake direction has changed
+        // - else continue the current window, but don't record this as a new hit
         val isExpired =
             detectionWindowStartNs == 0L || timestampNs - detectionWindowStartNs > detectionWindowNs
-        val newHits = if (isExpired) {
-            1
-        } else if (shakeDirectionChanged) {
-            hits + 1
-        } else {
-            hits
+        val newHits = when {
+            isExpired -> 1
+            shakeDirectionChanged -> hits + 1
+            else -> hits
         }
         val newWindowStart = if (isExpired) timestampNs else detectionWindowStartNs
 

@@ -29,7 +29,7 @@ class ShakeDetectionTest {
         // When we listen for shakes with a threshold of 1g
         val shakes = accelerometer.detectShakes(
             sensitivity = ShakeSensitivity(1.g),
-            detectionWindow = 10L,
+            detectionWindowNs = 10L,
             cooldownPeriodNs = 10L,
             minHits = 2,
         ).toList()
@@ -58,7 +58,7 @@ class ShakeDetectionTest {
         val accelerometer = FakeAccelerometer(samples)
         val shakes = accelerometer.detectShakes(
             sensitivity = ShakeSensitivity(1.1.g),
-            detectionWindow = 30L,
+            detectionWindowNs = 30L,
             cooldownPeriodNs = 20L,
             minHits = 2,
         ).toList()
@@ -89,7 +89,7 @@ class ShakeDetectionTest {
         // When we detect shakes with minimum hits of 3
         val shakes = accelerometer.detectShakes(
             sensitivity = ONE_G_SENSITIVITY,
-            detectionWindow = 4,
+            detectionWindowNs = 4,
             cooldownPeriodNs = 5,
             minHits = 3,
         ).toList()
@@ -121,7 +121,7 @@ class ShakeDetectionTest {
             val accelerometer = FakeAccelerometer(samples)
             val shakes = accelerometer.detectShakes(
                 sensitivity = ONE_G_SENSITIVITY,
-                detectionWindow = 5L,
+                detectionWindowNs = 5L,
                 cooldownPeriodNs = 5L,
                 minHits = 2,
             ).toList()
@@ -147,7 +147,7 @@ class ShakeDetectionTest {
         // When we detect shakes
         val shakes = accelerometer.detectShakes(
             sensitivity = ONE_G_SENSITIVITY,
-            detectionWindow = 5L,
+            detectionWindowNs = 5L,
             cooldownPeriodNs = 5L,
         ).toList()
 
@@ -175,7 +175,7 @@ class ShakeDetectionTest {
         // - with 5-nanosecond cool down period
         val shakes = accelerometer.detectShakes(
             sensitivity = ONE_G_SENSITIVITY,
-            detectionWindow = 4,
+            detectionWindowNs = 4,
             cooldownPeriodNs = 5,
         ).toList()
 
