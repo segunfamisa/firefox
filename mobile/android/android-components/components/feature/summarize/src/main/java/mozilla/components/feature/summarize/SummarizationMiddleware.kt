@@ -4,10 +4,15 @@
 
 package mozilla.components.feature.summarize
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.launch
 import mozilla.components.concept.llm.CloudLlmProvider
@@ -20,6 +25,8 @@ import mozilla.components.feature.summarize.settings.SummarizationSettings
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
 import mozilla.components.ui.richtext.parsing.Parser
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /** The initial middleware for the summarization feature */
 class SummarizationMiddleware(
@@ -28,6 +35,7 @@ class SummarizationMiddleware(
     private val pageContentExtractor: PageContentExtractor,
     private val pageMetadataExtractor: PageMetadataExtractor,
     private val errorReporter: ErrorReporter,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val scope: CoroutineScope,
 ) : Middleware<SummarizationState, SummarizationAction> {
 
@@ -61,18 +69,21 @@ class SummarizationMiddleware(
                 errorReporter.report(action.exception)
             }
             is ContentExtracted -> scope.launch {
-                val parser = Parser()
+                val richTextParser = Parser()
+                val responseBuilder = StringBuilder()
                 action.llm.prompt(Prompt("${action.instructions} ${action.content}"))
                     // We want to accumulate and parse the values that we get from [ReplyPart]
-                    // So we emit them and dispatch any other value we get from the [Llm]
                     .transform {
                         when (it) {
                             is Llm.Response.Success.ReplyPart -> emit(it.value)
                             else -> store.dispatch(ReceivedLlmResponse(it))
                         }
                     }
-                    .scan("") { acc, i -> acc + i }
-                    .map { parser.parse(it) }
+                    .map { chunk -> responseBuilder.append(chunk) }
+                    .sampledMap(period = PARSE_THROTTLE) { response ->
+                        richTextParser.parse(response.toString())
+                    }
+                    .flowOn(defaultDispatcher)
                     .collect { store.dispatch(ReceivedParsedDocument(it)) }
             }
         }
@@ -120,6 +131,28 @@ class SummarizationMiddleware(
         state is SummarizationState.Inert &&
             state.initializedWithShake &&
             !settings.getHasConsentedToShake().first()
+}
+
+private val PARSE_THROTTLE = 120.milliseconds
+
+
+/**
+ * Maps the input flow using the [transform] function, every [period] duration.
+ *
+ * Values emitted between the samples, are completed dropped.
+ *
+ * @param period The period to wait between samples
+ * @param transform The transformation/mapping operation
+ */
+private fun <T, R> Flow<T>.sampledMap(
+    period: Duration = PARSE_THROTTLE,
+    transform: (T) -> R,
+): Flow<R> {
+    return conflate()
+        .transform {
+            emit(transform(it))
+            delay(period)
+        }
 }
 
 private val PageMetadata.isRecipe get() = structuredDataTypes.any { it.lowercase() == "recipe" }
