@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package org.mozilla.fenix.translations
+package org.mozilla.fenix.translations.settings
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -18,18 +18,21 @@ import androidx.fragment.compose.content
 import androidx.navigation.fragment.findNavController
 import mozilla.components.browser.state.action.TranslationsAction
 import mozilla.components.browser.state.selector.selectedTab
-import mozilla.components.browser.state.state.TranslationsBrowserState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.base.feature.UserInteractionHandler
 import org.mozilla.fenix.GleanMetrics.Translations
 import org.mozilla.fenix.R
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
+import org.mozilla.fenix.ext.openToBrowser
 import org.mozilla.fenix.ext.requireComponents
 import org.mozilla.fenix.ext.settings
 import org.mozilla.fenix.ext.showToolbar
 import org.mozilla.fenix.nimbus.FxNimbus
 import org.mozilla.fenix.theme.FirefoxTheme
+import org.mozilla.fenix.translations.TranslationSettingsScreenOption
+import org.mozilla.fenix.translations.TranslationSwitchItem
+import org.mozilla.fenix.translations.TranslationsDialogAccessPoint
 
 /**
  * A fragment displaying the Firefox Translation settings screen.
@@ -48,11 +51,19 @@ class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemIn
         savedInstanceState: Bundle?,
     ) = content {
         FirefoxTheme {
+            val translationsState by browserStore.observeAsComposableState { it.translationEngine }
+            val switchItems: List<TranslationSwitchItem> = getTranslationSwitchItemList()
+            val settingsState = remember(translationsState.isTranslationsEnabled, switchItems) {
+                TranslationsSettingsState(
+                    showAutomaticTranslations = FxNimbus.features.translations.value().globalLangSettingsEnabled,
+                    showNeverTranslate = FxNimbus.features.translations.value().globalSiteSettingsEnabled,
+                    showDownloads = FxNimbus.features.translations.value().downloadsEnabled,
+                    translationsEnabled = translationsState.isTranslationsEnabled,
+                    switchItems = switchItems,
+                )
+            }
             TranslationSettings(
-                translationSwitchList = getTranslationSwitchItemList(),
-                showAutomaticTranslations = FxNimbus.features.translations.value().globalLangSettingsEnabled,
-                showNeverTranslate = FxNimbus.features.translations.value().globalSiteSettingsEnabled,
-                showDownloads = FxNimbus.features.translations.value().downloadsEnabled,
+                state = settingsState,
                 pageSettingsError = browserStore.observeAsComposableState { state ->
                     state.selectedTab?.translationsState?.settingsError
                 }.value,
@@ -77,13 +88,29 @@ class TranslationSettingsFragment : Fragment(), UserInteractionHandler, SystemIn
                             .actionTranslationSettingsFragmentToDownloadLanguagesPreferenceFragment(),
                     )
                 },
+                onFeatureControlToggled = { enabled ->
+                    browserStore.dispatch(
+                        action = TranslationsAction.SetTranslationsEnabledAction(isTranslationsEnabled = enabled),
+                    )
+                },
+                onNavigateToUrl = { url ->
+                    openBrowserAndLoad(url)
+                },
             )
         }
     }
 
+    private fun openBrowserAndLoad(url: String) {
+        findNavController().openToBrowser()
+        requireComponents.useCases.fenixBrowserUseCases.loadUrlOrSearch(
+            searchTermOrURL = url,
+            newTab = true,
+        )
+    }
+
     /**
      * Set the switch item values.
-     * The first one is based on [TranslationsBrowserState.offerTranslation].
+     * The first one is based on [mozilla.components.browser.state.state.TranslationsBrowserState.offerTranslation].
      * The second one is [DownloadLanguageFileDialog] visibility.
      * This pop-up will appear if the switch item is unchecked, the phone is in saving mode, and
      * doesn't have a WiFi connection.

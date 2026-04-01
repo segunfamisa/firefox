@@ -423,8 +423,9 @@ class MenuDialogFragment : BottomSheetDialogFragment() {
                     val tabCollectionStorage = components.core.tabCollectionStorage
                     val printContentUseCase = components.useCases.sessionUseCases.printContent
                     val saveToPdfUseCase = components.useCases.sessionUseCases.saveToPdf
-                    val isTranslationEngineSupported =
-                        browserStore.state.translationEngine.isEngineSupported ?: false
+                    val isTranslationEngineSupported = with(browserStore.state.translationEngine) {
+                        isTranslationsEnabled && (isEngineSupported ?: false)
+                    }
                     val isTranslationSupported =
                         isTranslationEngineSupported &&
                             FxNimbus.features.translations.value().mainFlowBrowserMenuEnabled
