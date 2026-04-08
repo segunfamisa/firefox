@@ -28,6 +28,7 @@ import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import org.mozilla.fenix.HomeActivity
 import org.mozilla.fenix.NavGraphDirections
 import org.mozilla.fenix.R
+import org.mozilla.fenix.bookmarks.import.DefaultBookmarksFileParser
 import org.mozilla.fenix.components.QrScanFenixFeature
 import org.mozilla.fenix.components.VoiceSearchFeature
 import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
@@ -117,6 +118,7 @@ class BookmarkFragment : Fragment(), SystemInsetsPaddedFragment {
                                 lifecycleScope = lifecycleScope,
                                 bookmarksStorage = requireContext().bookmarkStorage,
                                 addNewTabUseCase = requireComponents.useCases.tabsUseCases.addTab,
+                                bookmarksFileParser = DefaultBookmarksFileParser(appContext = requireContext().applicationContext),
                                 fenixBrowserUseCases = requireComponents.useCases.fenixBrowserUseCases,
                                 useNewSearchUX = settings().shouldUseComposableToolbar,
                                 openBookmarksInNewTab = if (settings().enableHomepageAsNewTab) {

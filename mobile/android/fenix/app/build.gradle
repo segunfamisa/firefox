@@ -679,6 +679,7 @@ dependencies {
     implementation libs.androidx.work.runtime
     implementation libs.google.material
     implementation libs.installreferrer
+    implementation libs.jsoup
     implementation libs.kotlinx.coroutines
     implementation libs.kotlinx.serialization.json
     implementation libs.mozilla.glean

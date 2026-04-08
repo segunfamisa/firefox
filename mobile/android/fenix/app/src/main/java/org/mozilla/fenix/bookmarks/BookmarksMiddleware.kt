@@ -17,6 +17,7 @@ import mozilla.components.concept.storage.BookmarksStorage
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
+import org.mozilla.fenix.bookmarks.import.BookmarksFileParser
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
 import org.mozilla.fenix.utils.LastSavedFolderCache
@@ -52,6 +53,7 @@ internal class BookmarksMiddleware(
     private val bookmarksStorage: BookmarksStorage,
     private val addNewTabUseCase: TabsUseCases.AddNewTabUseCase,
     private val fenixBrowserUseCases: FenixBrowserUseCases,
+    private val bookmarksFileParser: BookmarksFileParser,
     private val useNewSearchUX: Boolean,
     private val openBookmarksInNewTab: Boolean,
     private val getNavController: () -> NavController,
@@ -365,7 +367,7 @@ internal class BookmarksMiddleware(
                 }
             }
             is ImportAction -> {
-                // TODO handle import action
+                handleImportAction(action)
             }
             SelectFolderAction.SearchClicked,
             SelectFolderAction.SearchDismissed,
@@ -731,6 +733,21 @@ internal class BookmarksMiddleware(
 
             if (!getNavController().popBackStack()) {
                 exitBookmarks()
+            }
+        }
+    }
+
+    private fun handleImportAction(action: ImportAction) {
+        when(action) {
+            is ImportAction.FilePicked -> {
+                if (action.uri == null) return
+                lifecycleScope.launch {
+                    bookmarksFileParser.parse(uri = action.uri)
+                        .onSuccess { tree ->
+                        }
+                        .onFailure { error ->
+                        }
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ import mozilla.components.compose.browser.toolbar.store.BrowserToolbarStore
 import mozilla.components.compose.browser.toolbar.store.Mode
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import org.mozilla.fenix.R
+import org.mozilla.fenix.bookmarks.import.DefaultBookmarksFileParser
 import org.mozilla.fenix.components.accounts.FenixFxAEntryPoint
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.e2e.SystemInsetsPaddedFragment
@@ -65,6 +66,7 @@ class EditBookmarkFragment : Fragment(R.layout.fragment_edit_bookmark), SystemIn
                                     bookmarksStorage = requireContext().bookmarkStorage,
                                     addNewTabUseCase = requireComponents.useCases.tabsUseCases.addTab,
                                     fenixBrowserUseCases = requireComponents.useCases.fenixBrowserUseCases,
+                                    bookmarksFileParser = DefaultBookmarksFileParser(appContext = requireContext().applicationContext),
                                     useNewSearchUX = settings().shouldUseComposableToolbar,
                                     openBookmarksInNewTab = if (settings().enableHomepageAsNewTab) {
                                         false
