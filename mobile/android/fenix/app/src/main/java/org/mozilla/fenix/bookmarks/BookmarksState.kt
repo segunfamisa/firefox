@@ -97,6 +97,7 @@ internal data class BookmarksState(
     val bookmarksMultiselectMoveState: MultiselectMoveState?,
     val isLoading: Boolean,
     val isSearching: Boolean,
+    val bookmarksImportState: BookmarksImportState = BookmarksImportState.Default,
 ) : State {
     val showNewFolderButton: Boolean
         get() = bookmarksSelectFolderState?.innerSelectionGuid == null &&
@@ -122,6 +123,17 @@ internal data class BookmarksState(
             isLoading = true,
             isSearching = false,
         )
+    }
+}
+
+
+internal data class BookmarksImportState(
+    val showFilePicker: Boolean = false,
+    val importing: Boolean = false,
+) {
+
+    companion object {
+        val Default = BookmarksImportState()
     }
 }
 

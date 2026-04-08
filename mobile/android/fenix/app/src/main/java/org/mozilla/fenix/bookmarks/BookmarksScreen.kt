@@ -126,9 +126,11 @@ import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import org.mozilla.fenix.Config
 import org.mozilla.fenix.R
+import org.mozilla.fenix.bookmarks.BookmarksListMenuAction.OverflowAction
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.BOOKMARK_TOOLBAR
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD
+import org.mozilla.fenix.bookmarks.ui.FilePicker
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.components
@@ -344,6 +346,14 @@ private fun BookmarksList(
         AlertDialogDeletionWarning(
             onCancelTapped = { store.dispatch(DeletionDialogAction.CancelTapped) },
             onDeleteTapped = { store.dispatch(DeletionDialogAction.DeleteTapped) },
+        )
+    }
+
+    if (state.bookmarksImportState.showFilePicker) {
+        FilePicker(
+            onResult = { uri ->
+                store.dispatch(ImportAction.FilePicked(uri))
+            }
         )
     }
 
@@ -853,7 +863,13 @@ private fun BookmarksListTopBarActionsNoSelection(
         }
     }
 
-    if (!isCurrentFolderMobileRoot) {
+    if (isCurrentFolderMobileRoot) {
+        MobileRootOverflowMenu(
+            onMenuItemClicked = { overflowAction ->
+                store.dispatch(overflowAction)
+            }
+        )
+    } else {
         IconButton(onClick = { store.dispatch(CloseClicked) }) {
             Icon(
                 painter = painterResource(iconsR.drawable.mozac_ic_cross_24),
@@ -864,6 +880,39 @@ private fun BookmarksListTopBarActionsNoSelection(
             )
         }
     }
+}
+
+@Composable
+private fun MobileRootOverflowMenu(
+    onMenuItemClicked: (overflowAction: OverflowAction) -> Unit = {},
+) {
+    var showOverflow by remember { mutableStateOf(false) }
+    IconButton(
+        onClick = {
+            showOverflow = !showOverflow
+        },
+    ) {
+        Icon(
+            painter = painterResource(iconsR.drawable.mozac_ic_ellipsis_vertical_24),
+            contentDescription = "More options",
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    DropdownMenu(
+        menuItems = listOf(
+            MenuItem.TextItem(
+                text = Text.String("Import from file"),
+                onClick = {
+                    onMenuItemClicked(OverflowAction.ImportBookmarksClicked)
+                },
+            ),
+        ),
+        expanded = showOverflow,
+        onDismissRequest = {
+            showOverflow = !showOverflow
+        },
+    )
 }
 
 @Composable
@@ -1088,8 +1137,8 @@ private fun FolderListItem(
     } else {
         Box(
             modifier = Modifier
-            .padding(start = if (!showPadding) folder.startPadding else 0.dp)
-            .width(FirefoxTheme.layout.size.containerMaxWidth),
+                .padding(start = if (!showPadding) folder.startPadding else 0.dp)
+                .width(FirefoxTheme.layout.size.containerMaxWidth),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when (folder.expansionState) {

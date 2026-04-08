@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.bookmarks
 
+import android.net.Uri
 import mozilla.components.lib.state.Action
 
 /**
@@ -35,6 +36,10 @@ internal data class BookmarksLoaded(
 internal data class RecursiveSelectionCountLoaded(
     val count: Int,
 ) : BookmarksAction
+
+internal sealed class ImportAction : BookmarksAction {
+    data class FilePicked(val uri: Uri?): ImportAction()
+}
 
 internal sealed class BookmarksListMenuAction : BookmarksAction {
     internal data object SelectAll : BookmarksListMenuAction()
@@ -73,6 +78,10 @@ internal sealed class BookmarksListMenuAction : BookmarksAction {
         data object OldestClicked : SortMenu()
         data object AtoZClicked : SortMenu()
         data object ZtoAClicked : SortMenu()
+    }
+
+    internal sealed class OverflowAction: BookmarksListMenuAction() {
+        data object ImportBookmarksClicked: OverflowAction()
     }
 }
 

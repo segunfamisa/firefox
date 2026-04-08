@@ -364,6 +364,9 @@ internal class BookmarksMiddleware(
                     }
                 }
             }
+            is ImportAction -> {
+                // TODO handle import action
+            }
             SelectFolderAction.SearchClicked,
             SelectFolderAction.SearchDismissed,
             is InitEditLoaded,
@@ -675,6 +678,7 @@ internal class BookmarksMiddleware(
             is BookmarksListMenuAction.Folder.DeleteClicked,
             is BookmarksListMenuAction.Folder.SelectClicked,
             is BookmarksListMenuAction.Bookmark.SelectClicked,
+            is BookmarksListMenuAction.OverflowAction.ImportBookmarksClicked,
             -> Unit
         }
     }

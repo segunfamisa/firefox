@@ -56,6 +56,7 @@ internal class BookmarksTelemetryMiddleware : Middleware<BookmarksState, Bookmar
             is InitEdit,
             is InitEditLoaded,
             is ReceivedSyncSignInUpdate,
+            is ImportAction,
             CloseClicked, AddFolderClicked, Init, SignIntoSyncClicked,
             OpenTabsConfirmationDialogAction.CancelTapped, OpenTabsConfirmationDialogAction.ConfirmTapped,
             FirstSyncCompleted, PrivateBrowsingAuthorized,
@@ -72,7 +73,7 @@ internal class BookmarksTelemetryMiddleware : Middleware<BookmarksState, Bookmar
             is BookmarksListMenuAction.Bookmark -> handleBookmarksListMenuBookmarkAction(action)
             is BookmarksListMenuAction.MultiSelect -> state.handleBookmarksListMenuMultiSelectAction(action)
             is BookmarksListMenuAction.SortMenu -> action.record()
-            BookmarksListMenuAction.SelectAll -> Unit
+            BookmarksListMenuAction.SelectAll, is BookmarksListMenuAction.OverflowAction -> Unit
         }
     }
 

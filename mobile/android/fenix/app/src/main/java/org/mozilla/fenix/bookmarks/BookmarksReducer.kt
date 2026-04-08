@@ -5,6 +5,7 @@
 package org.mozilla.fenix.bookmarks
 
 import mozilla.appservices.places.BookmarkRoot
+import org.mozilla.fenix.bookmarks.BookmarksListMenuAction.OverflowAction
 
 /**
  * Function for reducing a new bookmarks state based on the received action.
@@ -62,6 +63,7 @@ internal fun bookmarksReducer(state: BookmarksState, action: BookmarksAction) = 
     is SnackbarAction -> state.handleSnackbarAction(action)
     is DeletionDialogAction -> state.handleDeletionDialogAction(action)
     is OpenTabsConfirmationDialogAction -> state.handleOpenTabsConfirmationDialogAction(action)
+    is ImportAction -> state.handleImportAction(action)
     is ReceivedSyncSignInUpdate -> {
         state.copy(isSignedIntoSync = action.isSignedIn)
     }
@@ -73,6 +75,12 @@ internal fun bookmarksReducer(state: BookmarksState, action: BookmarksAction) = 
     Init,
     PrivateBrowsingAuthorized,
     -> state
+}
+
+private fun BookmarksState.handleImportAction(action: ImportAction): BookmarksState {
+    return when(action) {
+        is ImportAction.FilePicked -> this.copy(bookmarksImportState = bookmarksImportState.copy(showFilePicker = false))
+    }
 }
 
 private fun BookmarksState.handleOpenTabsConfirmationDialogAction(
@@ -434,6 +442,14 @@ private fun BookmarksState.handleSortMenuAction(action: BookmarksAction): Bookma
         )
     }
 
+private fun BookmarksState.handleOverflowAction(action: OverflowAction): BookmarksState {
+    return when(action) {
+        is OverflowAction.ImportBookmarksClicked -> {
+            copy(bookmarksImportState = this.bookmarksImportState.copy(showFilePicker = true))
+        }
+    }
+}
+
 @Suppress("CyclomaticComplexMethod")
 private fun BookmarksState.handleListMenuAction(action: BookmarksListMenuAction): BookmarksState =
     when (action) {
@@ -493,6 +509,7 @@ private fun BookmarksState.handleListMenuAction(action: BookmarksListMenuAction)
         BookmarksListMenuAction.MultiSelect.MoveClicked -> this.handleMoveClicked()
         is BookmarksListMenuAction.SelectAll -> copy(selectedItems = bookmarkItems)
         is BookmarksListMenuAction.SortMenu -> handleSortMenuAction(action)
+        is OverflowAction -> handleOverflowAction(action)
         else -> this
     }.let { updatedState ->
         when (action) {
