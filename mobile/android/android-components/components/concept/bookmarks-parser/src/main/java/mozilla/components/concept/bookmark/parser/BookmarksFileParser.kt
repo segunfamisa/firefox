@@ -67,6 +67,8 @@ private class FakeSuccessParser(val returnedTree: InsertableBookmarkNode?) : Boo
                     ),
                     InsertableBookmarkNode.Separator(
                         position = 2u,
+                        dateAddedTimestamp = 0L,
+                        lastModifiedTimestamp = 0L,
                     ),
                     InsertableBookmarkNode.Item(
                         parentGuid = "12345",
