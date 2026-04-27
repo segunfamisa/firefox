@@ -129,6 +129,7 @@ import org.mozilla.fenix.bookmarks.BookmarksTestTag.BOOKMARK_TOOLBAR
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.ui.AddFolderScreen
+import org.mozilla.fenix.bookmarks.ui.EditFolderScreen
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.components
@@ -927,7 +928,7 @@ private fun WarnDialog(
 }
 
 @Composable
-private fun AlertDialogDeletionWarning(
+internal fun AlertDialogDeletionWarning(
     onCancelTapped: () -> Unit,
     onDeleteTapped: () -> Unit,
 ) {
@@ -1627,108 +1628,6 @@ private fun BookmarkListFolderMenu(
 }
 
 @Composable
-private fun EditFolderScreen(
-    store: BookmarksStore,
-) {
-    val state by store.stateFlow.collectAsState()
-    val editState = state.bookmarksEditFolderState ?: return
-    val dialogState = state.bookmarksDeletionDialogState
-
-    if (dialogState is DeletionDialogState.Presenting) {
-        AlertDialogDeletionWarning(
-            onCancelTapped = { store.dispatch(DeletionDialogAction.CancelTapped) },
-            onDeleteTapped = { store.dispatch(DeletionDialogAction.DeleteTapped) },
-        )
-    }
-
-    Scaffold(
-        topBar = {
-            EditFolderTopBar(
-                onBackClick = { store.dispatch(BackClicked) },
-                onDeleteClick = { store.dispatch(EditFolderAction.DeleteClicked) },
-            )
-        },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            Column(
-                modifier = Modifier.width(FirefoxTheme.layout.size.containerMaxWidth),
-            ) {
-                TextField(
-                    value = editState.folder.title,
-                    onValueChange = { newText ->
-                        store.dispatch(EditFolderAction.TitleChanged(newText))
-                    },
-                    placeholder = "",
-                    errorText = "",
-                    modifier = Modifier.padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 32.dp,
-                    ),
-                    label = stringResource(R.string.bookmark_name_label_normal_case),
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    stringResource(R.string.bookmark_save_in_label),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = FirefoxTheme.typography.body2,
-                    modifier = Modifier.padding(start = 16.dp),
-                )
-
-                IconListItem(
-                    label = editState.parent.title,
-                    beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_folder_24),
-                    onClick = { store.dispatch(EditFolderAction.ParentFolderClicked) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EditFolderTopBar(
-    onBackClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-) {
-    TopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.edit_bookmark_folder_fragment_title),
-                style = FirefoxTheme.typography.headline5,
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
-                    contentDescription = stringResource(R.string.bookmark_navigate_back_button_content_description),
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = onDeleteClick) {
-                Icon(
-                    painter = painterResource(iconsR.drawable.mozac_ic_delete_24),
-                    contentDescription = stringResource(R.string.bookmark_delete_folder_content_description),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        },
-        windowInsets = WindowInsets(
-            top = 0.dp,
-            bottom = 0.dp,
-        ),
-    )
-}
-
-@Composable
 private fun EditBookmarkScreen(
     store: BookmarksStore,
 ) {
@@ -1956,62 +1855,6 @@ private fun EditBookmarkScreenPreview() {
 
     FirefoxTheme {
         EditBookmarkScreen(store = store)
-    }
-}
-
-@Composable
-@FlexibleWindowLightDarkPreview
-private fun EditFolderScreenPreview() {
-    val store = BookmarksStore(
-        initialState = BookmarksState(
-            bookmarkItems = listOf(),
-            selectedItems = listOf(),
-            rootMenuShown = false,
-            showBookmarksImport = true,
-            sortMenuShown = false,
-            sortOrder = BookmarksListSortOrder.default,
-            recursiveSelectedCount = null,
-            currentFolder = BookmarkItem.Folder(
-                guid = BookmarkRoot.Mobile.id,
-                title = "Bookmarks",
-                position = null,
-            ),
-            isSignedIntoSync = true,
-            openTabsConfirmationDialog = OpenTabsConfirmationDialog.None,
-            bookmarksDeletionDialogState = DeletionDialogState.None,
-            bookmarksSnackbarState = BookmarksSnackbarState.None,
-            bookmarksAddFolderState = null,
-            bookmarksEditBookmarkState = BookmarksEditBookmarkState(
-                bookmark = BookmarkItem.Bookmark(
-                    url = "https://www.whoevenmakeswebaddressesthislonglikeseriously1.com",
-                    title = "this is a very long bookmark title that should overflow 1",
-                    previewImageUrl = "",
-                    guid = "1",
-                    position = null,
-                ),
-                folder = BookmarkItem.Folder("folder 1", guid = "1", position = null),
-            ),
-            bookmarksSelectFolderState = null,
-            bookmarksEditFolderState = BookmarksEditFolderState(
-                parent = BookmarkItem.Folder(
-                    guid = BookmarkRoot.Mobile.id,
-                    title = "Bookmarks",
-                    position = null,
-                ),
-                folder = BookmarkItem.Folder(
-                    guid = BookmarkRoot.Mobile.id,
-                    title = "New folder",
-                    position = null,
-                ),
-            ),
-            bookmarksMultiselectMoveState = null,
-            isLoading = false,
-            isSearching = false,
-        ),
-    )
-
-    FirefoxTheme {
-        EditFolderScreen(store = store)
     }
 }
 
