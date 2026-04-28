@@ -30,20 +30,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -78,15 +73,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,18 +115,17 @@ import mozilla.components.compose.browser.toolbar.ui.BrowserToolbarQuery
 import mozilla.components.concept.base.profiler.Profiler
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.ktx.android.view.hideKeyboard
-import org.mozilla.fenix.Config
 import org.mozilla.fenix.R
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.BOOKMARK_TOOLBAR
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_TITLE_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.BookmarksTestTag.EDIT_BOOKMARK_ITEM_URL_TEXT_FIELD
 import org.mozilla.fenix.bookmarks.ui.AddFolderScreen
 import org.mozilla.fenix.bookmarks.ui.EditFolderScreen
+import org.mozilla.fenix.bookmarks.ui.SelectFolderScreen
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.components
 import org.mozilla.fenix.compose.Favicon
-import org.mozilla.fenix.compose.list.IconListItem
 import org.mozilla.fenix.compose.list.SelectableFaviconListItem
 import org.mozilla.fenix.compose.list.SelectableIconListItem
 import org.mozilla.fenix.ext.components
@@ -956,335 +947,6 @@ internal fun AlertDialogDeletionWarning(
 }
 
 @Composable
-private fun SelectFolderScreen(
-    store: BookmarksStore,
-) {
-    val showNewFolderButton by remember { store.stateFlow.map { store.state.showNewFolderButton } }
-        .collectAsState(initial = store.state.showNewFolderButton)
-    val state by remember { store.stateFlow.map { it.bookmarksSelectFolderState } }
-        .collectAsState(initial = store.state.bookmarksSelectFolderState)
-
-    LaunchedEffect(Unit) {
-        store.dispatch(SelectFolderAction.ViewAppeared)
-    }
-
-    BackInvokedHandler(state?.isSearching ?: false) {
-        store.dispatch(SelectFolderAction.SearchDismissed)
-    }
-
-    val focusManager = LocalFocusManager.current
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    Scaffold(
-        modifier = Modifier
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                                store.dispatch(SelectFolderAction.SearchDismissed)
-                            },
-                        )
-                    },
-        topBar = {
-            if (state?.isSearching ?: false) {
-                SelectFolderSearchTopBar(store = store)
-            } else {
-                SelectFolderTopBar(store = store)
-            }
-        },
-    ) { paddingValues ->
-        if (state?.isLoading ?: false) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-        LazyColumn(
-            modifier = Modifier
-                .padding(paddingValues)
-                .padding(vertical = 16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            items(
-                key = { item -> item.folder.guid },
-                items = state?.visibleFolders.orEmpty().flattenToList(),
-            ) { folder ->
-                FolderListItem(
-                    folder = folder,
-                    isSelected = folder.guid == state?.selectedGuid,
-                    showPadding = state?.isSearching ?: true,
-                    onClick = { store.dispatch(SelectFolderAction.ItemClicked(folder)) },
-                    onChevronClick = { store.dispatch(SelectFolderAction.ChevronClicked(folder)) },
-                )
-            }
-
-            if (showNewFolderButton) {
-                item {
-                    NewFolderListItem { store.dispatch(AddFolderClicked) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SelectFolderSearchTopBar(store: BookmarksStore) {
-    val focusRequester = remember { FocusRequester() }
-    var text by remember {
-        mutableStateOf(
-            TextFieldValue(
-                store.state.bookmarksSelectFolderState?.searchQuery.orEmpty(),
-                selection = TextRange(
-                    store.state.bookmarksSelectFolderState?.searchQuery?.length ?: 0,
-                ),
-            ),
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        val value = text.text
-        text = text.copy(selection = TextRange(value.length))
-    }
-
-    TopAppBar(
-        title = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { newValue ->
-                    text = newValue
-                    store.dispatch(
-                        SelectFolderAction.SearchQueryUpdated(newValue.text),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
-                placeholder = {
-                    stringResource(R.string.select_bookmark_search_button_content_description)
-                },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(iconsR.drawable.mozac_ic_search_24),
-                        contentDescription = stringResource(
-                            R.string.select_bookmark_search_button_content_description,
-                            ),
-                        )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-            )
-        },
-        navigationIcon = {},
-        actions = {},
-        windowInsets = WindowInsets(
-            top = 0.dp,
-            bottom = 0.dp,
-        ),
-    )
-}
-
-@Composable
-private fun FolderListItem(
-    folder: SelectFolderItem,
-    isSelected: Boolean,
-    showPadding: Boolean = true,
-    onClick: () -> Unit,
-    onChevronClick: () -> Unit,
-) {
-    if (folder.isDesktopRoot) {
-        Box(
-            modifier = Modifier.padding(
-            start = folder.startPadding,
-            ),
-        ) {
-            Row(modifier = Modifier.width(FirefoxTheme.layout.size.containerMaxWidth)) {
-                Spacer(modifier = Modifier.width(56.dp))
-                Text(
-                    text = folder.title,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    style = FirefoxTheme.typography.headline8,
-                )
-            }
-        }
-    } else {
-        Box(
-            modifier = Modifier
-            .padding(start = if (!showPadding) folder.startPadding else 0.dp)
-            .width(FirefoxTheme.layout.size.containerMaxWidth),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                when (folder.expansionState) {
-                    is SelectFolderExpansionState.None -> Spacer(modifier = Modifier.size(width = 48.dp, height = 0.dp))
-                    is SelectFolderExpansionState.Open -> {
-                        IconButton(onClick = onChevronClick) {
-                            Icon(
-                                painter = painterResource(iconsR.drawable.mozac_ic_chevron_down_24),
-                                contentDescription = stringResource(
-                                    R.string.bookmark_select_folder_close_folder_content_description,
-                                    folder.title,
-                                ),
-                            )
-                        }
-                    }
-                    is SelectFolderExpansionState.Closed -> {
-                        IconButton(onClick = onChevronClick) {
-                            Icon(
-                                painter = painterResource(iconsR.drawable.mozac_ic_chevron_right_24),
-                                contentDescription = stringResource(
-                                    R.string.bookmark_select_folder_expand_folder_content_description,
-                                    folder.title,
-                                ),
-                            )
-                        }
-                    }
-                }
-                SelectableIconListItem(
-                    label = folder.title,
-                    isSelected = isSelected,
-                    beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_folder_24),
-                    modifier = Modifier
-                        .toggleable(
-                            value = isSelected,
-                            role = Role.RadioButton,
-                            onValueChange = { onClick() },
-                        ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NewFolderListItem(onClick: () -> Unit) {
-    IconListItem(
-        label = stringResource(R.string.bookmark_select_folder_new_folder_button_title),
-        modifier = Modifier.width(FirefoxTheme.layout.size.containerMaxWidth),
-        colors = ListItemDefaults.colors(
-            headlineColor = MaterialTheme.colorScheme.tertiary,
-            ),
-        beforeIconPainter = painterResource(iconsR.drawable.mozac_ic_folder_add_24),
-        beforeIconTint = MaterialTheme.colorScheme.tertiary,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun SelectFolderTopBar(store: BookmarksStore) {
-    val onNewFolderClick = store.state.showNewFolderButton.takeIf { it }?.let {
-        { store.dispatch(AddFolderClicked) }
-    }
-    TopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.bookmark_select_folder_fragment_label),
-                style = FirefoxTheme.typography.headline5,
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = { store.dispatch(BackClicked) }) {
-                Icon(
-                    painter = painterResource(iconsR.drawable.mozac_ic_back_24),
-                    contentDescription = stringResource(R.string.bookmark_navigate_back_button_content_description),
-                )
-            }
-        },
-        actions = {
-            Box {
-                IconButton(onClick = {
-                    store.dispatch(BookmarksListMenuAction.SortMenu.SortMenuButtonClicked)
-                }) {
-                    Icon(
-                        painter = painterResource(iconsR.drawable.mozac_ic_sort_24),
-                        contentDescription = stringResource(
-                            R.string.bookmark_sort_menu_content_desc,
-                        ),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-
-                SelectFolderSortOverflowMenu(store = store)
-            }
-
-            // TODO https://bugzilla.mozilla.org/show_bug.cgi?id=2006505
-            if (Config.channel.isDebug) {
-                IconButton(
-                    onClick = {
-                        store.dispatch(SelectFolderAction.SearchClicked)
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(iconsR.drawable.mozac_ic_search_24),
-                        contentDescription = stringResource(
-                            R.string.select_bookmark_search_button_content_description,
-                        ),
-                    )
-                }
-            }
-
-            if (onNewFolderClick != null) {
-                IconButton(onClick = { onNewFolderClick() }) {
-                    Icon(
-                        painter = painterResource(iconsR.drawable.mozac_ic_folder_add_24),
-                        contentDescription = stringResource(
-                            R.string.bookmark_add_new_folder_button_content_description,
-                        ),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-        },
-        windowInsets = WindowInsets(
-            top = 0.dp,
-            bottom = 0.dp,
-        ),
-    )
-}
-
-@Composable
-private fun SelectFolderSortOverflowMenu(store: BookmarksStore) {
-    val showMenu by remember { store.stateFlow.map { store.state.sortMenuShown } }
-        .collectAsState(initial = store.state.sortMenuShown)
-    val sortOrder by remember { store.stateFlow.map { store.state.sortOrder } }
-        .collectAsState(initial = store.state.sortOrder)
-
-    val menuItems = listOf(
-        MenuItem.CheckableItem(
-            text = Text.Resource(R.string.bookmark_sort_menu_custom),
-            isChecked = sortOrder is BookmarksListSortOrder.Positional,
-            onClick = { store.dispatch(SelectFolderAction.SortMenu.CustomSortClicked) },
-        ),
-        MenuItem.CheckableItem(
-            text = Text.Resource(R.string.bookmark_sort_menu_newest),
-            isChecked = sortOrder == BookmarksListSortOrder.Created(ascending = true),
-            onClick = { store.dispatch(SelectFolderAction.SortMenu.NewestClicked) },
-        ),
-        MenuItem.CheckableItem(
-            text = Text.Resource(R.string.bookmark_sort_menu_oldest),
-            isChecked = sortOrder == BookmarksListSortOrder.Created(ascending = false),
-            onClick = { store.dispatch(SelectFolderAction.SortMenu.OldestClicked) },
-        ),
-        MenuItem.CheckableItem(
-            text = Text.Resource(R.string.bookmark_sort_menu_a_to_z),
-            isChecked = sortOrder == BookmarksListSortOrder.Alphabetical(ascending = true),
-            onClick = { store.dispatch(SelectFolderAction.SortMenu.AtoZClicked) },
-        ),
-        MenuItem.CheckableItem(
-            text = Text.Resource(R.string.bookmark_sort_menu_z_to_a),
-            isChecked = sortOrder == BookmarksListSortOrder.Alphabetical(ascending = false),
-            onClick = { store.dispatch(SelectFolderAction.SortMenu.ZtoAClicked) },
-        ),
-    )
-    DropdownMenu(
-        menuItems = menuItems,
-        expanded = showMenu,
-        onDismissRequest = { store.dispatch(SelectFolderAction.SortMenu.SortMenuDismissed) },
-    )
-}
-
-@Composable
 private fun RootBookmarksOverflowMenu(store: BookmarksStore) {
     val showMenu by remember { store.stateFlow.map { store.state.rootMenuShown } }
         .collectAsState(initial = store.state.rootMenuShown)
@@ -1965,127 +1627,3 @@ private fun EmptyBookmarksScreenPreview() {
 }
 
 private const val PREVIEW_BOOKMARKS_SIZE = 20
-
-private const val PREVIEW_INDENTATION_0 = 0
-private const val PREVIEW_INDENTATION_1 = 1
-private const val PREVIEW_INDENTATION_2 = 2
-private const val PREVIEW_INDENTATION_3 = 3
-
-@FlexibleWindowLightDarkPreview
-@Suppress("detekt.LongMethod")
-@Composable
-private fun SelectFolderPreview() {
-    val store = BookmarksStore(
-        initialState = BookmarksState(
-            bookmarkItems = listOf(),
-            selectedItems = listOf(),
-            rootMenuShown = false,
-            showBookmarksImport = true,
-            sortMenuShown = false,
-            sortOrder = BookmarksListSortOrder.default,
-            recursiveSelectedCount = null,
-            currentFolder = BookmarkItem.Folder(
-                guid = BookmarkRoot.Mobile.id,
-                title = "Bookmarks",
-                position = null,
-            ),
-            isSignedIntoSync = false,
-            bookmarksEditBookmarkState = null,
-            bookmarksAddFolderState = BookmarksAddFolderState(
-                parent = BookmarkItem.Folder(
-                    guid = BookmarkRoot.Mobile.id,
-                    title = "Bookmarks",
-                    position = null,
-                ),
-                folderBeingAddedTitle = "Edit me!",
-            ),
-            openTabsConfirmationDialog = OpenTabsConfirmationDialog.None,
-            bookmarksDeletionDialogState = DeletionDialogState.None,
-            bookmarksSnackbarState = BookmarksSnackbarState.None,
-            bookmarksEditFolderState = null,
-            bookmarksSelectFolderState = BookmarksSelectFolderState(
-                outerSelectionGuid = "",
-                innerSelectionGuid = "guid1",
-                folders = listOf(
-                    SelectFolderItem(
-                        indentation = PREVIEW_INDENTATION_0,
-                        folder = BookmarkItem.Folder("Bookmarks", "guid0", null),
-                        expansionState = SelectFolderExpansionState.Closed,
-                    ),
-                    SelectFolderItem(
-                        indentation = PREVIEW_INDENTATION_0,
-                        folder = BookmarkItem.Folder("Bookmarks Menu", BookmarkRoot.Menu.id, null),
-                        expansionState = SelectFolderExpansionState.None,
-                    ),
-                    SelectFolderItem(
-                        indentation = PREVIEW_INDENTATION_0,
-                        folder = BookmarkItem.Folder("Bookmarks Toolbar", BookmarkRoot.Toolbar.id, position = null),
-                        expansionState = SelectFolderExpansionState.None,
-                    ),
-                    SelectFolderItem(
-                        indentation = PREVIEW_INDENTATION_1,
-                        folder = BookmarkItem.Folder("Desktop Bookmarks", BookmarkRoot.Root.id, position = null),
-                        expansionState = SelectFolderExpansionState.None,
-                    ),
-                    SelectFolderItem(
-                        indentation = PREVIEW_INDENTATION_0,
-                        folder = BookmarkItem.Folder("Bookmarks Unfiled", BookmarkRoot.Unfiled.id, position = null),
-                        expansionState = SelectFolderExpansionState.Open(
-                            listOf(
-                                SelectFolderItem(
-                                    indentation = PREVIEW_INDENTATION_1,
-                                    folder = BookmarkItem.Folder("Nested One", "guid0", position = null),
-                                    expansionState = SelectFolderExpansionState.Open(
-                                        listOf(
-                                            SelectFolderItem(
-                                                indentation = PREVIEW_INDENTATION_2,
-                                                folder = BookmarkItem.Folder("Nested Two", "guid0", position = null),
-                                                expansionState = SelectFolderExpansionState.None,
-                                            ),
-                                            SelectFolderItem(
-                                                indentation = PREVIEW_INDENTATION_2,
-                                                folder = BookmarkItem.Folder("Nested Two", "guid0", position = null),
-                                                expansionState = SelectFolderExpansionState.None,
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                                SelectFolderItem(
-                                    indentation = PREVIEW_INDENTATION_1,
-                                    folder = BookmarkItem.Folder("Nested One", "guid0", position = null),
-                                    expansionState = SelectFolderExpansionState.Open(
-                                        listOf(
-                                            SelectFolderItem(
-                                                indentation = PREVIEW_INDENTATION_2,
-                                                folder = BookmarkItem.Folder("Nested Two", "guid1", position = null),
-                                                expansionState = SelectFolderExpansionState.Open(
-                                                    listOf(
-                                                        SelectFolderItem(
-                                                            indentation = PREVIEW_INDENTATION_3,
-                                                            folder = BookmarkItem.Folder(
-                                                                title = "Nested Three",
-                                                                guid = "guid0",
-                                                                position = null,
-                                                            ),
-                                                            expansionState = SelectFolderExpansionState.None,
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-            bookmarksMultiselectMoveState = null,
-            isLoading = false,
-            isSearching = false,
-        ),
-    )
-    FirefoxTheme {
-        SelectFolderScreen(store)
-    }
-}
