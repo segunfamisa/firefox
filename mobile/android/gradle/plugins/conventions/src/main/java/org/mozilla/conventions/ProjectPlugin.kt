@@ -24,6 +24,7 @@ import org.gradle.api.tasks.testing.TestListener
 import org.gradle.api.tasks.testing.TestOutputEvent
 import org.gradle.api.tasks.testing.TestOutputListener
 import org.gradle.api.tasks.testing.TestResult
+import org.mozilla.conventions.config.versioning.configureVersioning
 import java.io.File
 
 class ProjectPlugin : Plugin<Project> {
@@ -32,6 +33,7 @@ class ProjectPlugin : Plugin<Project> {
         val mozilla = project.extensions.create("mozilla", ProjectExtension::class.java)
         mozilla.androidComponentsProject.convention(false)
         mozilla.ktlintSourcePaths.convention(emptyList())
+        mozilla.applyVersioning.convention(false)
 
         val extraProperties = project.gradle.extensions.extraProperties
         val mozconfig = extraProperties["mozconfig"] as Map<String, Any>
@@ -58,6 +60,7 @@ class ProjectPlugin : Plugin<Project> {
         configureTestOutputFormatting(project)
         configurePackagingResourcesExcludes(project)
         registerPrintVariantsTask(project)
+        project.configureVersioning(mozilla)
     }
 
     // Initialize the project buildDir to be in ${topobjdir} to follow

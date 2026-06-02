@@ -10,4 +10,9 @@ import org.gradle.api.provider.Property
 interface ProjectExtension {
     val androidComponentsProject: Property<Boolean>
     val ktlintSourcePaths: ListProperty<String>
+
+    // Opt-in for the Fenix-style versioning convention (Fennec versionCode + per-channel
+    // versionName). Today only `mobile/android/fenix/app` sets this — Focus and the
+    // android-components library modules deliberately leave it false.
+    val applyVersioning: Property<Boolean>
 }
