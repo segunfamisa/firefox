@@ -4,6 +4,7 @@
 
 package mozilla.components.feature.importer
 
+import mozilla.components.concept.bookmarks.file.BookmarksImporterError
 import mozilla.components.lib.state.State
 
 /**
@@ -39,7 +40,7 @@ sealed interface ImporterResult {
     data class Success(val importCount: Int) : ImporterResult
 
     /** The import failed due to an error. */
-    data object Failure : ImporterResult
+    data class Failure(val error: BookmarksImporterError) : ImporterResult
 
     /** The user cancelled the import. */
     data object Canceled : ImporterResult

@@ -18,6 +18,9 @@ import mozilla.components.feature.importer.ImporterResult
 import mozilla.components.lib.bookmark.parser.jsoup.jsoupParser
 import mozilla.components.lib.bookmarks.file.htmlImporter
 import org.mozilla.fenix.R
+import org.mozilla.fenix.bookmarks.importer.FenixBookmarkImporterError
+import org.mozilla.fenix.bookmarks.importer.FenixImporterResult
+import org.mozilla.fenix.bookmarks.importer.toFenixError
 import org.mozilla.fenix.ext.requireComponents
 
 internal class ImportBookmarksDialogFragment : DialogFragment() {
@@ -38,7 +41,7 @@ internal class ImportBookmarksDialogFragment : DialogFragment() {
             onFinished = { result ->
                 parentFragmentManager.setFragmentResult(
                     REQUEST_KEY,
-                    Bundle().apply { putString(KEY_RESULT, result.encode()) },
+                    result.resultBundle(),
                 )
                 dismiss()
             },
@@ -48,23 +51,47 @@ internal class ImportBookmarksDialogFragment : DialogFragment() {
     companion object {
         const val REQUEST_KEY = "import_bookmarks_request"
         const val KEY_RESULT = "result"
+        const val KEY_ERROR_TYPE = "result_error_type"
+        const val KEY_SUCCESS_IMPORT_COUNT = "result_success_import_count"
         internal const val RESULT_SUCCESS = "success"
         internal const val RESULT_FAILURE = "failure"
         internal const val RESULT_CANCELLED = "cancelled"
         const val TAG = "import_dialog"
 
-        fun decodeResult(bundle: Bundle): ImporterResult? =
+        fun decodeResult(bundle: Bundle): FenixImporterResult? =
             when (bundle.getString(KEY_RESULT)) {
-                RESULT_SUCCESS -> ImporterResult.Success(importCount = 0)
-                RESULT_FAILURE -> ImporterResult.Failure
-                RESULT_CANCELLED -> ImporterResult.Canceled
+                RESULT_SUCCESS -> FenixImporterResult.Success(
+                    importCount = bundle.getInt(KEY_SUCCESS_IMPORT_COUNT, 0),
+                )
+
+                RESULT_FAILURE -> {
+                    val errorOrdinal = bundle.getInt(KEY_ERROR_TYPE, FenixBookmarkImporterError.UNKNOWN_ERROR.ordinal)
+                    FenixImporterResult.Failure(error = FenixBookmarkImporterError.entries[errorOrdinal])
+                }
+
+                RESULT_CANCELLED -> FenixImporterResult.Canceled
                 else -> null
             }
     }
 }
 
-private fun ImporterResult.encode(): String = when (this) {
-    is ImporterResult.Success -> ImportBookmarksDialogFragment.RESULT_SUCCESS
-    ImporterResult.Failure -> ImportBookmarksDialogFragment.RESULT_FAILURE
-    ImporterResult.Canceled -> ImportBookmarksDialogFragment.RESULT_CANCELLED
+private fun ImporterResult.resultBundle(): Bundle {
+    val status = when (this) {
+        is ImporterResult.Success -> ImportBookmarksDialogFragment.RESULT_SUCCESS
+        is ImporterResult.Failure -> ImportBookmarksDialogFragment.RESULT_FAILURE
+        is ImporterResult.Canceled -> ImportBookmarksDialogFragment.RESULT_CANCELLED
+    }
+
+    val importCount = (this as? ImporterResult.Success)?.importCount
+    val error = (this as? ImporterResult.Failure)?.error?.toFenixError()
+
+    return Bundle().apply {
+        putString(ImportBookmarksDialogFragment.KEY_RESULT, status)
+        importCount?.let {
+            putInt(ImportBookmarksDialogFragment.KEY_SUCCESS_IMPORT_COUNT, it)
+        }
+        error?.let {
+            putInt(ImportBookmarksDialogFragment.KEY_ERROR_TYPE, error.ordinal)
+        }
+    }
 }

@@ -21,6 +21,7 @@ import mozilla.components.feature.importer.ImporterResult
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
+import org.mozilla.fenix.bookmarks.importer.FenixImporterResult
 import org.mozilla.fenix.browser.browsingmode.BrowsingMode
 import org.mozilla.fenix.components.bookmarks.BookmarksUseCase
 import org.mozilla.fenix.components.usecases.FenixBrowserUseCases
@@ -72,7 +73,7 @@ internal class BookmarksMiddleware(
     private val saveBookmarkSortOrder: suspend (BookmarksListSortOrder) -> Unit,
     private val editBookmarkUseCase: BookmarksUseCase.EditBookmarkUseCase,
     private val reportResultGlobally: (BookmarksGlobalResultReport) -> Unit,
-    private val importResults: () -> Flow<ImporterResult>,
+    private val importResults: () -> Flow<FenixImporterResult>,
     private val lifecycleScope: CoroutineScope,
 ) : Middleware<BookmarksState, BookmarksAction> {
 
@@ -100,9 +101,10 @@ internal class BookmarksMiddleware(
                     importResults()
                         .onEach { result ->
                             when (result) {
-                                ImporterResult.Canceled -> Unit
-                                ImporterResult.Failure -> store.dispatch(ImportAction.ImportFailed)
-                                is ImporterResult.Success -> store.dispatch(
+                                is FenixImporterResult.Canceled -> Unit
+                                is FenixImporterResult.Failure ->
+                                    store.dispatch(ImportAction.ImportFailed(error = result.error))
+                                is FenixImporterResult.Success -> store.dispatch(
                                     action = ImportAction.ImportSucceeded(result.importCount),
                                 )
                             }
@@ -381,7 +383,7 @@ internal class BookmarksMiddleware(
             is ImportAction.ImportFileClicked -> {
                 navigateToImportDialog()
             }
-            ImportAction.ImportFailed -> {
+            is ImportAction.ImportFailed -> {
                 store.dispatch(SnackbarAction.ImportFailed)
             }
             SearchClicked,

@@ -105,7 +105,13 @@ interface MetricController {
                     settings,
                 )
             } else {
-                DebugMetricController()
+                ReleaseMetricController(
+                    services,
+                    isDataTelemetryEnabled,
+                    isMarketingDataTelemetryEnabled,
+                    isUsageTelemetryEnabled,
+                    settings,
+                )
             }
         }
     }
