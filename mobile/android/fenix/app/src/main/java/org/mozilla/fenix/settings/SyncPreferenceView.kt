@@ -13,7 +13,7 @@ import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 
 /**
  * A view to help manage the sync preference in the "Passwords" and "Payment Methods"

@@ -15,7 +15,7 @@ import mozilla.components.feature.syncedtabs.controller.SyncedTabsController
 import mozilla.components.feature.syncedtabs.view.SyncedTabsView
 import mozilla.components.feature.syncedtabs.view.SyncedTabsView.ErrorType
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage.Companion.SYNC_ENGINES_KEY
+import mozilla.components.service.fxa.sync.SyncEnginesStorage.Companion.SYNC_ENGINES_KEY
 import mozilla.components.support.test.mock
 import mozilla.components.support.test.robolectric.testContext
 import org.junit.Test

@@ -29,7 +29,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import mozilla.components.concept.sync.AccountObserver
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -20,7 +20,7 @@ import mozilla.components.feature.syncedtabs.controller.SyncedTabsController
 import mozilla.components.feature.syncedtabs.view.SyncedTabsView
 import mozilla.components.feature.syncedtabs.view.SyncedTabsView.ErrorType
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 
 /**

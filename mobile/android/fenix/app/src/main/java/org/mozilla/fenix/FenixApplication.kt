@@ -62,7 +62,7 @@ import mozilla.components.feature.syncedtabs.commands.GlobalSyncedTabsCommandsPr
 import mozilla.components.feature.top.sites.TopSitesFrecencyConfig
 import mozilla.components.feature.top.sites.TopSitesProviderConfig
 import mozilla.components.lib.crash.CrashReporter
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.sync.autofill.GlobalAutofillDependencyProvider
 import mozilla.components.service.sync.logins.GlobalLoginsDependencyProvider
 import mozilla.components.service.sync.logins.LoginsApiException

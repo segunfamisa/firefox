@@ -31,7 +31,7 @@ import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.lib.state.ext.consumeFrom
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.fragmentStore
 import mozilla.components.lib.state.helpers.StoreProvider.Companion.storeProvider
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.sync.autofill.AutofillCreditCardsAddressesStorage
 import mozilla.components.ui.widgets.withCenterAlignedButtons
 import org.mozilla.fenix.Config

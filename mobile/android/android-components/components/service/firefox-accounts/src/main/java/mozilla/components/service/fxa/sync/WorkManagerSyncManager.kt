@@ -35,7 +35,6 @@ import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.FxaDeviceSettingsCache
 import mozilla.components.service.fxa.SyncAuthInfoCache
 import mozilla.components.service.fxa.manager.GlobalAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry

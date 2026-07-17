@@ -2,15 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-package mozilla.components.service.fxa.manager
+package mozilla.components.service.fxa.sync
 
 import android.content.Context
 import androidx.core.content.edit
 import mozilla.components.concept.sync.SyncEngine
-import mozilla.components.service.fxa.sync.toSyncEngine
 
 /**
- * Storage layer for the enabled/disabled state of [SyncEngine].
+ * Storage layer for the enabled/disabled state of [mozilla.components.concept.sync.SyncEngine].
  */
 class SyncEnginesStorage(private val context: Context) {
     companion object {
@@ -18,7 +17,7 @@ class SyncEnginesStorage(private val context: Context) {
     }
 
     /**
-     * @return A map describing known enabled/disabled state of [SyncEngine].
+     * @return A map describing known enabled/disabled state of [mozilla.components.concept.sync.SyncEngine].
      */
     fun getStatus(): Map<SyncEngine, Boolean> {
         val resultMap = mutableMapOf<SyncEngine, Boolean>()

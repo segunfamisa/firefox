@@ -25,12 +25,12 @@ import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.feature.syncedtabs.storage.SyncedTabsStorage
 import mozilla.components.service.fxa.manager.FxaAccountManager
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
 import mozilla.components.service.fxa.manager.ext.withConstellationIfExists
 import mozilla.components.service.fxa.store.Account
 import mozilla.components.service.fxa.store.SyncAction
 import mozilla.components.service.fxa.store.SyncStatus
 import mozilla.components.service.fxa.store.SyncStore
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.support.test.robolectric.testContext
 import mozilla.telemetry.glean.testing.ErrorType

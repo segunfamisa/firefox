@@ -47,6 +47,7 @@ import mozilla.components.service.fxa.SyncAuthInfoCache
 import mozilla.components.service.fxa.asSyncAuthInfo
 import mozilla.components.service.fxa.emitSyncFailedFact
 import mozilla.components.service.fxa.into
+import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.fxa.sync.SyncManager
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.service.fxa.sync.SyncStatusObserver
