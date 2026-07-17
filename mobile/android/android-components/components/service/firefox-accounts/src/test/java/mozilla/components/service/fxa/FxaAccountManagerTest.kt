@@ -23,15 +23,20 @@ import mozilla.components.concept.sync.DeviceConfig
 import mozilla.components.concept.sync.DeviceConstellation
 import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.FxAEntryPoint
+import mozilla.components.concept.sync.PeriodicSyncConfig
 import mozilla.components.concept.sync.StatePersistenceCallback
+import mozilla.components.concept.sync.SyncAuthInfo
 import mozilla.components.concept.sync.SyncConfig
+import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.manager.SCOPE_SYNC
+import mozilla.components.service.fxa.sync.GlobalSyncDependencyProvider
 import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.fxa.sync.SyncManager
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 import mozilla.components.support.base.observer.ObserverRegistry
+import mozilla.components.support.base.utils.SharedPreferencesCache
 import mozilla.components.support.test.any
 import mozilla.components.support.test.argumentCaptor
 import mozilla.components.support.test.eq
@@ -51,6 +56,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import kotlin.coroutines.CoroutineContext
+import kotlin.test.assertNull
 
 internal class TestableStorageWrapper(
     manager: FxaAccountManager,
@@ -98,9 +104,13 @@ internal open class TestableFxaAccountManager(
 
 @RunWith(AndroidJUnit4::class)
 class FxaAccountManagerTest {
+
+    private val syncAuthInfoCache: SharedPreferencesCache<SyncAuthInfo>
+        get() = GlobalSyncDependencyProvider.syncAuthInfoCache
+
     @After
     fun cleanup() {
-        SyncAuthInfoCache(testContext).clear()
+        syncAuthInfoCache.clear()
         SyncEnginesStorage(testContext).clear()
     }
 
@@ -637,6 +647,233 @@ class FxaAccountManagerTest {
         integration.onLoggedOut()
         verify(syncManager, times(2)).stop()
         verifyNoMoreInteractions(syncManager)
+    }
+
+    @Test
+    fun `logout clears the sync auth info cache`() = runTest {
+        // given an existing sync auth state
+        syncAuthInfoCache.setToCache(
+            SyncAuthInfo(
+                kid = "test-kid",
+                fxaAccessToken = "test-fxa-access-token",
+                fxaAccessTokenExpiresAt = 10L,
+                syncKey = "test-sync-key",
+                tokenServerUrl = "https://token.example.com/1.0/sync/1.5",
+            ),
+        )
+
+        val fxaManager = TestableFxaAccountManager(
+            context = testContext,
+            config = FxaConfig(FxaServer.Release, "dummyId", "http://auth-url/redirect"),
+            storage = mock(),
+            capabilities = setOf(DeviceCapability.SEND_TAB),
+            syncConfig = SyncConfig(
+                supportedEngines = setOf(SyncEngine.History, SyncEngine.Bookmarks),
+                periodicSyncConfig = PeriodicSyncConfig(),
+            ),
+            coroutineContext = this.coroutineContext,
+        )
+        // given the account can handle logout events
+        whenever(fxaManager.testableStorageWrapper.account.processEvent(FxaEvent.Disconnect))
+            .thenReturn(FxaState.Disconnected)
+
+        // when we log out
+        fxaManager.logout()
+
+        // then assert that we have cleared the cached value
+        assertNull(syncAuthInfoCache.getCached(), "Expected cached sync auth info to be cleared")
+    }
+
+    @Test
+    fun `when account is disconnected while authenticating with, then the cached sync auth info is cleared`() =
+        runTest {
+            // given an existing sync auth state
+            syncAuthInfoCache.setToCache(
+                SyncAuthInfo(
+                    kid = "test-kid",
+                    fxaAccessToken = "test-fxa-access-token",
+                    fxaAccessTokenExpiresAt = 10L,
+                    syncKey = "test-sync-key",
+                    tokenServerUrl = "https://token.example.com/1.0/sync/1.5",
+                ),
+            )
+            val fxaManager = TestableFxaAccountManager(
+                context = testContext,
+                config = FxaConfig(FxaServer.Release, "dummyId", "http://auth-url/redirect"),
+                storage = mock(),
+                capabilities = setOf(DeviceCapability.SEND_TAB),
+                syncConfig = SyncConfig(
+                    supportedEngines = setOf(SyncEngine.History, SyncEngine.Bookmarks),
+                    periodicSyncConfig = PeriodicSyncConfig(),
+                ),
+                coroutineContext = this.coroutineContext,
+            )
+            // given the account fails when beginning oauth flow
+            whenever(
+                fxaManager.testableStorageWrapper.account.processEvent(
+                    FxaEvent.BeginOAuthFlow(
+                        service = "service",
+                        scopes = listOf("sync"),
+                        entrypoint = "entrypoint",
+                    ),
+                ),
+            ).thenReturn(FxaState.Disconnected)
+
+            // when we begin auth flow
+            fxaManager.beginAuthentication(
+                entrypoint = object : FxAEntryPoint {
+                    override val entryName: String
+                        get() = "entrypoint"
+                },
+                pairingUrl = null,
+                authScopes = setOf("sync"),
+                service = "service",
+            )
+
+            // then verify that the cache is cleared
+            assertNull(syncAuthInfoCache.getCached(), "Cached sync auth info not cleared.")
+        }
+
+    @Test
+    fun `when account is disconnected during pairing auth flow, then the cached sync auth info is cleared`() =
+        runTest {
+            // given an existing sync auth state
+            syncAuthInfoCache.setToCache(
+                SyncAuthInfo(
+                    kid = "test-kid",
+                    fxaAccessToken = "test-fxa-access-token",
+                    fxaAccessTokenExpiresAt = 10L,
+                    syncKey = "test-sync-key",
+                    tokenServerUrl = "https://token.example.com/1.0/sync/1.5",
+                ),
+            )
+            val fxaManager = TestableFxaAccountManager(
+                context = testContext,
+                config = FxaConfig(FxaServer.Release, "dummyId", "http://auth-url/redirect"),
+                storage = mock(),
+                capabilities = setOf(DeviceCapability.SEND_TAB),
+                syncConfig = SyncConfig(
+                    supportedEngines = setOf(SyncEngine.History, SyncEngine.Bookmarks),
+                    periodicSyncConfig = PeriodicSyncConfig(),
+                ),
+                coroutineContext = this.coroutineContext,
+            )
+            // given the account fails when beginning email pariring flow
+            whenever(
+                fxaManager.testableStorageWrapper.account.processEvent(
+                    FxaEvent.BeginPairingFlow(
+                        pairingUrl = "pairing-url.com",
+                        service = "service",
+                        scopes = listOf("sync"),
+                        entrypoint = "entrypoint",
+                    ),
+                ),
+            ).thenReturn(FxaState.Disconnected)
+
+            // when we begin pairing url flow
+            fxaManager.beginAuthentication(
+                entrypoint = object : FxAEntryPoint {
+                    override val entryName: String
+                        get() = "entrypoint"
+                },
+                pairingUrl = "pairing-url.com",
+                authScopes = setOf("sync"),
+                service = "service",
+            )
+
+            // then verify that the cache is cleared
+            assertNull(syncAuthInfoCache.getCached(), "Cached sync auth info not cleared.")
+        }
+
+    @Test
+    fun `when account is disconnected on auth flow completion, then the cached sync auth info is cleared`() =
+        runTest {
+            // given an existing sync auth state
+            syncAuthInfoCache.setToCache(
+                SyncAuthInfo(
+                    kid = "test-kid",
+                    fxaAccessToken = "test-fxa-access-token",
+                    fxaAccessTokenExpiresAt = 10L,
+                    syncKey = "test-sync-key",
+                    tokenServerUrl = "https://token.example.com/1.0/sync/1.5",
+                ),
+            )
+            val fxaManager = TestableFxaAccountManager(
+                context = testContext,
+                config = FxaConfig(FxaServer.Release, "dummyId", "http://auth-url/redirect"),
+                storage = mock(),
+                capabilities = setOf(DeviceCapability.SEND_TAB),
+                syncConfig = SyncConfig(
+                    supportedEngines = setOf(SyncEngine.History, SyncEngine.Bookmarks),
+                    periodicSyncConfig = PeriodicSyncConfig(),
+                ),
+                coroutineContext = this.coroutineContext,
+            )
+            // given the account fails when oauth flow is completed
+            whenever(
+                fxaManager.testableStorageWrapper.account.processEvent(
+                    FxaEvent.CompleteOAuthFlow(
+                        code = "auth-code",
+                        state = "good-state",
+                    ),
+                ),
+            ).thenReturn(FxaState.Disconnected)
+
+            // when we complete auth flow
+            fxaManager.finishAuthentication(
+                authData = FxaAuthData(
+                    authType = AuthType.Signin,
+                    code = "auth-code",
+                    state = "good-state",
+                ),
+            )
+
+            // then verify that the cache is cleared
+            assertNull(syncAuthInfoCache.getCached(), "Cached sync auth info not cleared.")
+        }
+
+    @Test
+    fun `successful password change, clears the sync auth info cache`() = runTest {
+        // given an existing sync auth state
+        syncAuthInfoCache.setToCache(
+            SyncAuthInfo(
+                kid = "test-kid",
+                fxaAccessToken = "test-fxa-access-token",
+                fxaAccessTokenExpiresAt = 10L,
+                syncKey = "test-sync-key",
+                tokenServerUrl = "https://token.example.com/1.0/sync/1.5",
+            ),
+        )
+        val fxaManager = TestableFxaAccountManager(
+            context = testContext,
+            config = FxaConfig(FxaServer.Release, "dummyId", "http://auth-url/redirect"),
+            storage = mock(),
+            capabilities = setOf(DeviceCapability.SEND_TAB),
+            syncConfig = SyncConfig(
+                supportedEngines = setOf(SyncEngine.History, SyncEngine.Bookmarks),
+                periodicSyncConfig = PeriodicSyncConfig(),
+            ),
+            coroutineContext = this.coroutineContext,
+        )
+        // given the account successfully completes a password change
+        whenever(
+            fxaManager.testableStorageWrapper.account.processEvent(
+                FxaEvent.WebChannelPasswordChange(jsonPayload = "magical-payload"),
+            ),
+        ).thenReturn(FxaState.Connected)
+
+        // let's force a failed access token request (an unlikely scenario in reality)
+        // just to ensure that we don't save a new token after web channel password change
+        // so that we can verify. that we clear the data first before saving it.
+        whenever(
+            fxaManager.testableStorageWrapper.account.getAccessToken(any()),
+        ).thenReturn(null)
+
+        // when we handle the change event
+        fxaManager.handleWebChannelPasswordChange(jsonPayload = "magical-payload")
+
+        // then verify that the cache is cleared
+        assertNull(syncAuthInfoCache.getCached(), "Cached sync auth info not cleared.")
     }
 
     @Test

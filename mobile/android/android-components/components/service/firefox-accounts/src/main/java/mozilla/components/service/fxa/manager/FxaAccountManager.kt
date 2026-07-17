@@ -31,6 +31,7 @@ import mozilla.components.concept.sync.DeviceConfig
 import mozilla.components.concept.sync.FxAEntryPoint
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
+import mozilla.components.concept.sync.SyncAuthInfo
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.AccessTokenUnexpectedlyWithoutKey
@@ -43,7 +44,6 @@ import mozilla.components.service.fxa.SecureAbove22AccountStorage
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.SharedPrefAccountStorage
 import mozilla.components.service.fxa.StorageWrapper
-import mozilla.components.service.fxa.SyncAuthInfoCache
 import mozilla.components.service.fxa.asSyncAuthInfo
 import mozilla.components.service.fxa.emitSyncFailedFact
 import mozilla.components.service.fxa.into
@@ -59,6 +59,7 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
 import mozilla.components.support.base.utils.NamedThreadFactory
+import mozilla.components.support.base.utils.SharedPreferencesCache
 import java.io.Closeable
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext
@@ -117,10 +118,22 @@ open class FxaAccountManager(
     init {
         GlobalAccountManager.setInstance(this)
 
-        // This is a stop-gap that will be removed in bug 2055847
-        // https://bugzilla.mozilla.org/show_bug.cgi?id=2055847
-        GlobalSyncDependencyProvider.initialize(syncAuthErrorHandler = lazy { this })
+        // This is a stop-gap that will be removed in
+        // bug 2055847 (https://bugzilla.mozilla.org/show_bug.cgi?id=2055847)
+        GlobalSyncDependencyProvider.initialize(
+            applicationContext = context.applicationContext,
+            syncAuthErrorHandler = lazy { this },
+        )
     }
+
+    /**
+     * Shared-prefs backed cache that contains information about sync auth.
+     *
+     * This is a stop-gap that will be removed in
+     * [bug 2055847](https://bugzilla.mozilla.org/show_bug.cgi?id=2055847)
+     */
+    private val syncAuthInfoCache: SharedPreferencesCache<SyncAuthInfo>
+        get() = GlobalSyncDependencyProvider.syncAuthInfoCache
 
     private val accountOnDisk by lazy { getStorageWrapper().account() }
     private val account by lazy { accountOnDisk.account() }
@@ -413,7 +426,7 @@ open class FxaAccountManager(
         val wasInAuthIssues = state == FxaState.AuthIssues
         processQueue(Event.Account.WebChannelPasswordChange(jsonPayload))
         if (state == FxaState.Connected) {
-            SyncAuthInfoCache(context).clear()
+            syncAuthInfoCache.clear()
             authenticationSideEffects("WebChannelPasswordChange")
             if (wasInAuthIssues) {
                 notifyObservers { onAuthenticated(account, AuthType.Recovered) }
@@ -603,7 +616,7 @@ open class FxaAccountManager(
                 is Event.Account.AuthenticationError, Event.Account.AccessTokenKeyError -> {
                     // Clear our access token cache; it'll be re-populated as part of the
                     // regular state machine flow.
-                    SyncAuthInfoCache(context).clear()
+                    syncAuthInfoCache.clear()
                     // Should we also call authenticationSideEffects here?
                     // (https://bugzilla.mozilla.org/show_bug.cgi?id=1865086)
                     notifyObservers { onAuthenticated(account, AuthType.Recovered) }
@@ -612,7 +625,7 @@ open class FxaAccountManager(
                 else -> Unit
             }
             FxaState.AuthIssues -> {
-                SyncAuthInfoCache(context).clear()
+                syncAuthInfoCache.clear()
                 notifyObservers { onAuthenticationProblems() }
             }
             else -> Unit
@@ -627,7 +640,7 @@ open class FxaAccountManager(
         // Even though we might not have Sync enabled, clear out sync-related storage
         // layers as well; if they're already empty (unused), nothing bad will happen
         // and extra overhead is quite small.
-        SyncAuthInfoCache(context).clear()
+        syncAuthInfoCache.clear()
         SyncEnginesStorage(context).clear()
         clearSyncState(context)
     }
@@ -663,7 +676,7 @@ open class FxaAccountManager(
         }
 
         if (accessToken != null && tokenServerUrl != null) {
-            SyncAuthInfoCache(context).setToCache(accessToken.asSyncAuthInfo(tokenServerUrl))
+            syncAuthInfoCache.setToCache(accessToken.asSyncAuthInfo(tokenServerUrl))
         } else {
             // At this point, SyncAuthInfoCache may be entirely empty. In this case, we won't be
             // able to sync via the background worker. We will attempt to populate SyncAuthInfoCache
@@ -835,7 +848,7 @@ open class FxaAccountManager(
      */
     public fun simulateTemporaryAuthTokenIssue() {
         account.simulateTemporaryAuthTokenIssue()
-        SyncAuthInfoCache(context).clear()
+        syncAuthInfoCache.clear()
         CoroutineScope(coroutineContext).launch {
             refreshProfile(true)
         }
@@ -854,7 +867,7 @@ open class FxaAccountManager(
      */
     public fun simulatePermanentAuthTokenIssue() {
         account.simulatePermanentAuthTokenIssue()
-        SyncAuthInfoCache(context).clear()
+        syncAuthInfoCache.clear()
         CoroutineScope(coroutineContext).launch {
             refreshProfile(true)
         }

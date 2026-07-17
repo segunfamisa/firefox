@@ -30,13 +30,14 @@ import mozilla.appservices.syncmanager.SyncEngineSelection
 import mozilla.appservices.syncmanager.SyncParams
 import mozilla.appservices.syncmanager.SyncTelemetry
 import mozilla.components.concept.storage.KeyProvider
+import mozilla.components.concept.sync.SyncAuthInfo
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.FxaDeviceSettingsCache
-import mozilla.components.service.fxa.SyncAuthInfoCache
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
+import mozilla.components.support.base.utils.SharedPreferencesCache
 import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -304,6 +305,12 @@ internal class WorkManagerSyncWorker(
     private val authErrorHandler: SyncAuthErrorHandler
         get() = GlobalSyncDependencyProvider.requireSyncAuthErrorHandler()
 
+    /**
+     * [SharedPreferencesCache] for the [SyncAuthInfo] that stores info about sync
+     */
+    private val syncAuthInfoCache: SharedPreferencesCache<SyncAuthInfo>
+        get() = GlobalSyncDependencyProvider.syncAuthInfoCache
+
     @VisibleForTesting
     internal fun isDebounced(): Boolean {
         return params.tags.contains(SyncWorkerTag.Debounce.name)
@@ -399,7 +406,7 @@ internal class WorkManagerSyncWorker(
         val reason = params.inputData.getString(KEY_REASON)!!.toSyncReason()
 
         // We need a cached "sync auth info" object.
-        val syncAuthInfo = SyncAuthInfoCache(context).getCached() ?: return Result.failure()
+        val syncAuthInfo = syncAuthInfoCache.getCached() ?: return Result.failure()
 
         // We need any persisted state that we received from RustSyncManager in the past.
         // We should be able to pass a `null` value, but currently the library will crash.
