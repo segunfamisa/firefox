@@ -25,6 +25,7 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.appservices.sync15.SyncTelemetryPing
+import mozilla.appservices.syncmanager.DeviceSettings
 import mozilla.appservices.syncmanager.ServiceStatus
 import mozilla.appservices.syncmanager.SyncEngineSelection
 import mozilla.appservices.syncmanager.SyncParams
@@ -33,7 +34,6 @@ import mozilla.components.concept.storage.KeyProvider
 import mozilla.components.concept.sync.SyncAuthInfo
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
-import mozilla.components.service.fxa.FxaDeviceSettingsCache
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
@@ -311,6 +311,13 @@ internal class WorkManagerSyncWorker(
     private val syncAuthInfoCache: SharedPreferencesCache<SyncAuthInfo>
         get() = GlobalSyncDependencyProvider.syncAuthInfoCache
 
+    /**
+     * [SharedPreferencesCache] for sync's [DeviceSettings] that contains the fxa device id and
+     * other device information
+     */
+    private val syncDeviceSettingsCache: SharedPreferencesCache<DeviceSettings>
+        get() = GlobalSyncDependencyProvider.requireDeviceSettingsCache()
+
     @VisibleForTesting
     internal fun isDebounced(): Boolean {
         return params.tags.contains(SyncWorkerTag.Debounce.name)
@@ -445,7 +452,7 @@ internal class WorkManagerSyncWorker(
         // or re-configure our workers every time a change is made to the device name.
         // We have the same basic story already with syncAuthInfo cache, and a cache is much easier
         // to implement/reason about than worker reconfiguration.
-        val deviceSettings = FxaDeviceSettingsCache(context).getCached()!!
+        val deviceSettings = syncDeviceSettingsCache.getCached()!!
 
         // Obtain encryption keys for stores that came along with KeyProviders.
         // This can take a bit of time!

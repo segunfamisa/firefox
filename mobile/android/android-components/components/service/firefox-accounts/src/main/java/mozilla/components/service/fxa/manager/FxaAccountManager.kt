@@ -123,6 +123,7 @@ open class FxaAccountManager(
         GlobalSyncDependencyProvider.initialize(
             applicationContext = context.applicationContext,
             syncAuthErrorHandler = lazy { this },
+            deviceSettingsCache = lazy { FxaDeviceSettingsCache(context) },
         )
     }
 
@@ -134,6 +135,15 @@ open class FxaAccountManager(
      */
     private val syncAuthInfoCache: SharedPreferencesCache<SyncAuthInfo>
         get() = GlobalSyncDependencyProvider.syncAuthInfoCache
+
+    /**
+     * Shared-prefs backed cache that contains information about device settings
+     *
+     * This is a stop-gap that will be removed in
+     * [bug 2055847](https://bugzilla.mozilla.org/show_bug.cgi?id=2055847)
+     */
+    private val deviceSettingsCache: SharedPreferencesCache<DeviceSettings>
+        get() = GlobalSyncDependencyProvider.requireDeviceSettingsCache()
 
     private val accountOnDisk by lazy { getStorageWrapper().account() }
     private val account by lazy { accountOnDisk.account() }
@@ -734,7 +744,7 @@ open class FxaAccountManager(
         }
 
         // Sync workers also need to know about the current FxA device.
-        FxaDeviceSettingsCache(context).setToCache(
+        deviceSettingsCache.setToCache(
             DeviceSettings(
                 fxaDeviceId = account.getCurrentDeviceId()!!,
                 name = deviceConfig.name,
