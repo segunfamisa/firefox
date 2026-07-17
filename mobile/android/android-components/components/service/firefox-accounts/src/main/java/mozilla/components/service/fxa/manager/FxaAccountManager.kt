@@ -47,6 +47,8 @@ import mozilla.components.service.fxa.SyncAuthInfoCache
 import mozilla.components.service.fxa.asSyncAuthInfo
 import mozilla.components.service.fxa.emitSyncFailedFact
 import mozilla.components.service.fxa.into
+import mozilla.components.service.fxa.sync.GlobalSyncDependencyProvider
+import mozilla.components.service.fxa.sync.SyncAuthErrorHandler
 import mozilla.components.service.fxa.sync.SyncEnginesStorage
 import mozilla.components.service.fxa.sync.SyncManager
 import mozilla.components.service.fxa.sync.SyncReason
@@ -109,11 +111,15 @@ open class FxaAccountManager(
     private val coroutineContext: CoroutineContext = Executors.newSingleThreadExecutor(
         NamedThreadFactory("FxaAccountManager"),
     ).asCoroutineDispatcher() + SupervisorJob(),
-) : Closeable, Observable<AccountObserver> by ObserverRegistry() {
+) : Closeable, Observable<AccountObserver> by ObserverRegistry(), SyncAuthErrorHandler {
     private val logger = Logger("FirefoxAccountStateMachine")
 
     init {
         GlobalAccountManager.setInstance(this)
+
+        // This is a stop-gap that will be removed in bug 2055847
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=2055847
+        GlobalSyncDependencyProvider.initialize(syncAuthErrorHandler = lazy { this })
     }
 
     private val accountOnDisk by lazy { getStorageWrapper().account() }
@@ -259,6 +265,10 @@ open class FxaAccountManager(
      */
     suspend fun setEngineEnabled(engine: SyncEngine, enabled: Boolean) = withContext(coroutineContext) {
         syncManager?.setEngineEnabled(engine, enabled)
+    }
+
+    override suspend fun onSyncAuthError() {
+        GlobalAccountManager.authError("RustSyncManager.sync", forSync = true)
     }
 
     /**

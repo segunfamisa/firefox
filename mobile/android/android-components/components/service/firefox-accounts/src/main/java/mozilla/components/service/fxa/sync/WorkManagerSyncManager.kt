@@ -34,7 +34,6 @@ import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.FxaDeviceSettingsCache
 import mozilla.components.service.fxa.SyncAuthInfoCache
-import mozilla.components.service.fxa.manager.GlobalAccountManager
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
@@ -296,6 +295,15 @@ internal class WorkManagerSyncWorker(
 ) : CoroutineWorker(context, params) {
     private val logger = Logger("SyncWorker")
 
+    /**
+     * [SyncAuthErrorHandler] to help us delegate the logic of handling auth errors encountered
+     * during sync.
+     *
+     * The implementation of this is expected to be supplied through the [GlobalSyncDependencyProvider]
+     */
+    private val authErrorHandler: SyncAuthErrorHandler
+        get() = GlobalSyncDependencyProvider.requireSyncAuthErrorHandler()
+
     @VisibleForTesting
     internal fun isDebounced(): Boolean {
         return params.tags.contains(SyncWorkerTag.Debounce.name)
@@ -518,7 +526,7 @@ internal class WorkManagerSyncWorker(
             // Failure cases.
             ServiceStatus.AUTH_ERROR -> {
                 logger.error("Auth error")
-                GlobalAccountManager.authError("RustSyncManager.sync", forSync = true)
+                authErrorHandler.onSyncAuthError()
                 Result.failure()
             }
             ServiceStatus.SERVICE_ERROR -> {
