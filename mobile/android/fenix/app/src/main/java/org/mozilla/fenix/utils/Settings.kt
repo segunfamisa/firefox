@@ -2053,6 +2053,16 @@ class Settings(
         default = Config.channel.isDebug,
     )
 
+    /**
+     * Whether or not we want to use our Native SyncManager's status for inferring sync status
+     *
+     * See [bug 2041554](https://bugzilla.mozilla.org/show_bug.cgi?id=2041554)
+     */
+    var useNativeSyncManagerStatus by booleanPreference(
+        key = appContext.getPreferenceKey(R.string.pref_key_sync_use_native_syncmanager_status),
+        default = false,
+    )
+
     fun amoCollectionOverrideConfigured(): Boolean {
         return overrideAmoUser.isNotEmpty() || overrideAmoCollection.isNotEmpty()
     }

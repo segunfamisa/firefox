@@ -123,8 +123,13 @@ class BackgroundServices(
             SyncEngine.CreditCards,
             if (settings.isAddressSyncEnabled) SyncEngine.Addresses else null,
         )
-    private val syncConfig =
-        SyncConfig(supportedEngines, PeriodicSyncConfig(periodMinutes = 240)) // four hours
+    private val syncConfig by lazyMonitored {
+        SyncConfig(
+            supportedEngines = supportedEngines,
+            periodicSyncConfig = PeriodicSyncConfig(periodMinutes = 240), // four hours
+            useNativeSyncStatus = settings.useNativeSyncManagerStatus,
+        )
+    }
 
     private val creditCardKeyProvider by lazyMonitored { creditCardsStorage.value.crypto }
     private val passwordKeyProvider by lazyMonitored { passwordsStorage.value.crypto }

@@ -10,6 +10,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkerParameters
 import androidx.work.impl.utils.taskexecutor.TaskExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import kotlinx.coroutines.test.StandardTestDispatcher
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.sync.FakeSyncStatusObserver.Event.OnIdle
@@ -32,6 +33,7 @@ class WorkManagerSyncManagerTest {
     private lateinit var mockParam: WorkerParameters
     private lateinit var mockTags: Set<String>
     private lateinit var mockTaskExecutor: TaskExecutor
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setUp() {
@@ -243,8 +245,9 @@ class WorkManagerSyncManagerTest {
 
     private fun createSyncManager(observer: FakeSyncStatusObserver): WorkManagerSyncManager =
         WorkManagerSyncManager(
-            testContext,
-            SyncConfig(supportedEngines = setOf(SyncEngine.Tabs), periodicSyncConfig = null),
+            context = testContext,
+            syncConfig = SyncConfig(supportedEngines = setOf(SyncEngine.Tabs), periodicSyncConfig = null),
+            coroutineContext = testDispatcher,
         ).apply {
             registerSyncStatusObserver(observer)
             start()

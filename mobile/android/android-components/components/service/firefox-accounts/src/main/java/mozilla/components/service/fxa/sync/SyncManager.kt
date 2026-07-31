@@ -110,6 +110,8 @@ object GlobalSyncableStoreProvider {
  * Internal interface to enable testing SyncManager implementations independently from SyncDispatcher.
  */
 internal interface SyncDispatcher : Closeable, Observable<SyncStatusObserver> {
+
+    fun initialize()
     fun isSyncActive(): Boolean
     fun syncNow(
         reason: SyncReason,
@@ -220,6 +222,7 @@ internal abstract class SyncManager(
             )
         }
         dispatcherUpdated(dispatcher)
+        dispatcher.initialize()
         return dispatcher
     }
 

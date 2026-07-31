@@ -146,6 +146,9 @@
     <!-- Label for enabling trending and recent searches on the Homepage Search -->
     <string name="preferences_debug_settings_homepage_trending_recent_search" translatable="false">Enable Trending and Recent Search on Homepage</string>
 
+    <!-- Label for enabling "native syncmanager status" -->
+    <string name="preferences_debug_settings_use_native_syncmanager_status" translatable="false">Use native sync manager state to infer sync status</string>
+
     <!-- Search Optimization Secret Settings -->
     <string name="preferences_debug_settings_search_optimization" translatable="false">Search Optimization Feature</string>
     <string name="preferences_debug_settings_enable_search_optimization" translatable="false">Enable Search Optimization Feature</string>

@@ -22,7 +22,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.appservices.sync15.SyncTelemetryPing
 import mozilla.appservices.syncmanager.ServiceStatus
@@ -44,7 +47,7 @@ import mozilla.components.support.base.observer.ObserverRegistry
 import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import mozilla.appservices.syncmanager.SyncManager as RustSyncManager
+import kotlin.coroutines.CoroutineContext
 
 @VisibleForTesting
 internal enum class SyncWorkerTag {
@@ -53,7 +56,7 @@ internal enum class SyncWorkerTag {
     Debounce, // will debounce if another sync happened recently
 }
 
-private enum class SyncWorkerName {
+internal enum class SyncWorkerName {
     Periodic,
     Immediate,
 }
@@ -64,19 +67,14 @@ private const val KEY_REASON = "reason"
 private const val SYNC_WORKER_BACKOFF_DELAY_MINUTES = 3L
 
 /**
- * The Rust implemented SyncManager. Must be a singleton as it carries some state between
- * syncs. Does no IO at creation time so is safe to call on any thread.
- */
-val syncManager: RustSyncManager by lazy { RustSyncManager() }
-
-/**
  * A [SyncManager] implementation which uses WorkManager APIs to schedule sync tasks.
  *
  * Must be initialized on the main thread.
  */
 internal class WorkManagerSyncManager(
     private val context: Context,
-    syncConfig: SyncConfig,
+    private val syncConfig: SyncConfig,
+    private val coroutineContext: CoroutineContext,
 ) : SyncManager(syncConfig) {
     override val logger = Logger("BgSyncManager")
 
@@ -91,7 +89,13 @@ internal class WorkManagerSyncManager(
     }
 
     override fun createDispatcher(supportedEngines: Set<SyncEngine>): SyncDispatcher {
-        return WorkManagerSyncDispatcher(context, supportedEngines)
+        return WorkManagerSyncDispatcher(
+            context = context,
+            supportedEngines = supportedEngines,
+            syncConfig = syncConfig,
+            coroutineContext = coroutineContext,
+            rustSyncManager = DefaultRustSyncManager,
+        )
     }
 
     override fun dispatcherUpdated(dispatcher: SyncDispatcher) {
@@ -141,19 +145,52 @@ internal object WorkersLiveDataObserver {
 internal class WorkManagerSyncDispatcher(
     private val context: Context,
     private val supportedEngines: Set<SyncEngine>,
+    private val syncConfig: SyncConfig,
+    private val coroutineContext: CoroutineContext,
+    private val rustSyncManager: RustSyncManager,
 ) : SyncDispatcher, Observable<SyncStatusObserver> by ObserverRegistry(), Closeable {
     private val logger = Logger("WMSyncDispatcher")
+    private val coroutineScope = CoroutineScope(coroutineContext + SupervisorJob())
 
     // TODO does this need to be volatile?
     private var isSyncActive = false
+
+    /**
+     * Flag indicating whether any sync is happening with the
+     * [RustSyncManager]
+     */
+    private var isNativeSyncActive = false
 
     init {
         // Stop any currently active periodic syncing. Consumers of this class are responsible for
         // starting periodic syncing via [startPeriodicSync] if they need it.
         stopPeriodicSync()
+
+        GlobalAccountManager.setRustSyncManager(rustSyncManager)
+    }
+
+    override fun initialize() {
+        if (!syncConfig.useNativeSyncStatus) return
+
+        coroutineScope.launch(context = coroutineContext) {
+            rustSyncManager.isSyncActive
+                .collect { active ->
+                    isNativeSyncActive = active
+                    notifyObservers {
+                        if (active) {
+                            onStarted()
+                        } else {
+                            onIdle()
+                        }
+                    }
+                }
+        }
     }
 
     override fun workersStateChanged(currentWorkStates: List<WorkInfo.State>?) {
+        // don't use worker state for sync status if syncConfig.useNativeSyncStatus is true
+        if (syncConfig.useNativeSyncStatus) return
+
         if (currentWorkStates?.any { it == WorkInfo.State.RUNNING } == true) {
             notifyObservers { onStarted() }
             isSyncActive = true
@@ -164,7 +201,7 @@ internal class WorkManagerSyncDispatcher(
     }
 
     override fun isSyncActive(): Boolean {
-        return isSyncActive
+        return if (syncConfig.useNativeSyncStatus) isNativeSyncActive else isSyncActive
     }
 
     override fun syncNow(
@@ -206,6 +243,7 @@ internal class WorkManagerSyncDispatcher(
     }
 
     override fun close() {
+        coroutineScope.cancel()
         unregisterObservers()
         stopPeriodicSync()
     }
@@ -301,6 +339,9 @@ internal class WorkManagerSyncWorker(
     private val accountManager: FxaAccountManager
         get() = GlobalAccountManager.requireAccountManager()
 
+    private val rustSyncManager: RustSyncManager
+        get() = GlobalAccountManager.requireRustSyncManager()
+
     @VisibleForTesting
     internal fun isDebounced(): Boolean {
         return params.tags.contains(SyncWorkerTag.Debounce.name)
@@ -315,7 +356,7 @@ internal class WorkManagerSyncWorker(
         return engineSyncTimestamp[engine]?.let { isWithinStaggerBuffer(it) } ?: false
     }
 
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+    override suspend fun doWork(): Result = withContext(GlobalAccountManager.syncIoDispatcher) {
         logger.debug("Starting sync... Tagged as: ${params.tags}")
 
         // We will need a list of SyncableStores.
@@ -451,83 +492,94 @@ internal class WorkManagerSyncWorker(
             localEncryptionKeys = localEncryptionKeys,
         )
 
-        val syncResult = syncManager.sync(syncParams)
+        return rustSyncManager.sync(syncParams) { syncResult ->
 
-        // Persist the sync state; it may have changed during a sync, and RustSyncManager relies on us
-        // to store it.
-        setSyncState(context, syncResult.persistedState)
+            // Persist the sync state; it may have changed during a sync, and RustSyncManager relies on us
+            // to store it.
+            setSyncState(context, syncResult.persistedState)
 
-        // Log the results.
-        syncResult.failures.entries.forEach {
-            logger.error("Failed to sync ${it.key}, reason: ${it.value}")
-        }
-        syncResult.successful.forEach {
-            logger.info("Successfully synced $it")
-        }
-
-        // Process any changes to the list of declined/accepted engines.
-        // NB: We may have received engine state information about an engine we're unfamiliar with.
-        // `SyncEngine.Other(string)` stands in for unknown engines.
-        val declinedEngines = syncResult.declined?.map { it.toSyncEngine() }?.toSet() ?: emptySet()
-        // We synthesize the 'accepted' list ourselves: engines we know about - declined engines.
-        // This assumes that "engines we know about" is a subset of engines RustSyncManager knows about.
-        // RustSyncManager will handle this, eventually.
-        // See: https://github.com/mozilla/application-services/issues/1685
-        val acceptedEngines = syncableStores.keys.filter { !declinedEngines.contains(it) }
-
-        // Persist engine state changes.
-        with(SyncEnginesStorage(context)) {
-            declinedEngines.forEach { setStatus(it, status = false) }
-            acceptedEngines.forEach { setStatus(it, status = true) }
-        }
-
-        // Process telemetry.
-        syncResult.telemetryJson?.let { SyncTelemetry.processSyncTelemetry(SyncTelemetryPing.fromJSONString(it)) }
-
-        // Finally, declare success, failure or request a retry based on 'sync status'.
-        return when (syncResult.status) {
-            // Happy case.
-            ServiceStatus.OK -> {
-                // Worker should set the "last-synced" timestamp, and since we have a single timestamp,
-                // it's not clear if a single failure should prevent its update. That's the current behaviour
-                // in Fennec, but for very specific reasons that aren't relevant here. We could have
-                // a timestamp per store, or whatever we want here really.
-                // For now, we just update it every time we succeed to sync.
-                setLastSynced(context)
-                Result.success()
+            // Log the results.
+            syncResult.failures.entries.forEach {
+                logger.error("Failed to sync ${it.key}, reason: ${it.value}")
+            }
+            syncResult.successful.forEach {
+                logger.info("Successfully synced $it")
             }
 
-            // Retry cases.
-            // NB: retry doesn't mean "immediate retry". It means "retry, but respecting this worker's
-            // backoff policy, as configured during worker's creation.
-            // TODO FOR ALL retries: look at workerParams.mRunAttemptCount, don't retry after a certain number.
-            ServiceStatus.NETWORK_ERROR -> {
-                logger.error("Network error")
-                Result.retry()
-            }
-            ServiceStatus.BACKED_OFF -> {
-                logger.error("Backed-off error")
-                // As part of `syncResult`, we get back `nextSyncAllowedAt`. Ideally, we should not retry
-                // before that passes. However, we can not reconfigure back-off policy for an already
-                // created Worker. So, we just rely on a sensible default. `RustSyncManager` will fail
-                // to sync with a BACKED_OFF error without hitting the server if we don't respect
-                // `nextSyncAllowedAt`, so we should be good either way.
-                Result.retry()
+            // Process any changes to the list of declined/accepted engines.
+            // NB: We may have received engine state information about an engine we're unfamiliar with.
+            // `SyncEngine.Other(string)` stands in for unknown engines.
+            val declinedEngines =
+                syncResult.declined?.map { it.toSyncEngine() }?.toSet() ?: emptySet()
+            // We synthesize the 'accepted' list ourselves: engines we know about - declined engines.
+            // This assumes that "engines we know about" is a subset of engines RustSyncManager knows about.
+            // RustSyncManager will handle this, eventually.
+            // See: https://github.com/mozilla/application-services/issues/1685
+            val acceptedEngines = syncableStores.keys.filter { !declinedEngines.contains(it) }
+
+            // Persist engine state changes.
+            with(SyncEnginesStorage(context)) {
+                declinedEngines.forEach { setStatus(it, status = false) }
+                acceptedEngines.forEach { setStatus(it, status = true) }
             }
 
-            // Failure cases.
-            ServiceStatus.AUTH_ERROR -> {
-                logger.error("Auth error")
-                GlobalAccountManager.authError("RustSyncManager.sync", forSync = true)
-                Result.failure()
+            // Process telemetry.
+            syncResult.telemetryJson?.let {
+                SyncTelemetry.processSyncTelemetry(
+                    SyncTelemetryPing.fromJSONString(
+                        it,
+                    ),
+                )
             }
-            ServiceStatus.SERVICE_ERROR -> {
-                logger.error("Service error")
-                Result.failure()
-            }
-            ServiceStatus.OTHER_ERROR -> {
-                logger.error("'Other' error :(")
-                Result.failure()
+
+            // Finally, declare success, failure or request a retry based on 'sync status'.
+            when (syncResult.status) {
+                // Happy case.
+                ServiceStatus.OK -> {
+                    // Worker should set the "last-synced" timestamp, and since we have a single timestamp,
+                    // it's not clear if a single failure should prevent its update. That's the current behaviour
+                    // in Fennec, but for very specific reasons that aren't relevant here. We could have
+                    // a timestamp per store, or whatever we want here really.
+                    // For now, we just update it every time we succeed to sync.
+                    setLastSynced(context)
+                    Result.success()
+                }
+
+                // Retry cases.
+                // NB: retry doesn't mean "immediate retry". It means "retry, but respecting this worker's
+                // backoff policy, as configured during worker's creation.
+                // TODO FOR ALL retries: look at workerParams.mRunAttemptCount, don't retry after a certain number.
+                ServiceStatus.NETWORK_ERROR -> {
+                    logger.error("Network error")
+                    Result.retry()
+                }
+
+                ServiceStatus.BACKED_OFF -> {
+                    logger.error("Backed-off error")
+                    // As part of `syncResult`, we get back `nextSyncAllowedAt`. Ideally, we should not retry
+                    // before that passes. However, we can not reconfigure back-off policy for an already
+                    // created Worker. So, we just rely on a sensible default. `RustSyncManager` will fail
+                    // to sync with a BACKED_OFF error without hitting the server if we don't respect
+                    // `nextSyncAllowedAt`, so we should be good either way.
+                    Result.retry()
+                }
+
+                // Failure cases.
+                ServiceStatus.AUTH_ERROR -> {
+                    logger.error("Auth error")
+                    GlobalAccountManager.authError("RustSyncManager.sync", forSync = true)
+                    Result.failure()
+                }
+
+                ServiceStatus.SERVICE_ERROR -> {
+                    logger.error("Service error")
+                    Result.failure()
+                }
+
+                ServiceStatus.OTHER_ERROR -> {
+                    logger.error("'Other' error :(")
+                    Result.failure()
+                }
             }
         }
     }

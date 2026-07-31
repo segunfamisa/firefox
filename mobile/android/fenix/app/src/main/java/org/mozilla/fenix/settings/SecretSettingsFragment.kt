@@ -234,6 +234,11 @@ class SecretSettingsFragment : PreferenceFragmentCompat(), SystemInsetsPaddedFra
             onPreferenceChangeListener = SharedPreferenceUpdater()
         }
 
+        requirePreference<SwitchPreferenceCompat>(R.string.pref_key_sync_use_native_syncmanager_status).apply {
+            isChecked = settings.useNativeSyncManagerStatus
+            onPreferenceChangeListener = SharedPreferenceUpdater()
+        }
+
         requirePreference<SwitchPreferenceCompat>(R.string.pref_key_enable_lna_feature_enabled).apply {
             isVisible = Config.channel.isNightlyOrDebug
             isChecked = settings.isLnaFeatureEnabled
