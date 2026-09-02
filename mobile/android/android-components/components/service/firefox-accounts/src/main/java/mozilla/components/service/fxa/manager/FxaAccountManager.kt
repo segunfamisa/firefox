@@ -16,6 +16,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.appservices.fxaclient.DeviceConfig as ASDeviceConfig
@@ -236,6 +238,9 @@ open class FxaAccountManager(
     /** Indicates if sync is currently running. */
     fun isSyncActive() = syncManager?.isSyncActive() ?: false
 
+    /** Emits whether or not sync is connected on this device. Always `false` when sync isn't configured. */
+    val syncConnected: StateFlow<Boolean> by lazy { syncManager?.syncConnected ?: MutableStateFlow(false) }
+
     /**
      * Sets the enabled state of a sync engine and triggers a sync with [SyncReason.EngineChange].
      *
@@ -262,6 +267,8 @@ open class FxaAccountManager(
     /** Call this after registering your observers, and before interacting with this class. */
     suspend fun start() =
         withContext(coroutineContext) {
+            syncManager?.initialize()
+
             processQueue(Event.Account.Start)
 
             if (!isAccountManagerReady) {
@@ -652,6 +659,7 @@ open class FxaAccountManager(
         return WorkManagerSyncManager(
             context = context,
             syncConfig = config,
+            syncStateStorageProvider = syncStateStorageProvider,
             coroutineContext = coroutineContext,
         )
     }
@@ -683,6 +691,7 @@ open class FxaAccountManager(
                     AuthType.Existing,
                     AuthType.Recovered -> SyncReason.Startup
                 }
+            // if they have the sync scope.
             syncManager.start()
             syncManager.now(reason)
         }

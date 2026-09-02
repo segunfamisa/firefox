@@ -72,8 +72,8 @@ internal class SharedPrefsSyncStateStorage(private val sharedPrefs: SharedPrefer
      * Whether or not sync has been explicitly connected through an action. A `null` value indicates that the value has
      * never been set.
      *
-     * **Note**: [SyncStateStorage.syncConnected] alone does not represent whether sync should be considered
-     * connected in the app. It only tells us that this value has been set and saved to the storage.
+     * **Note**: [SyncStateStorage.syncConnected] alone does not represent whether sync should be considered connected
+     * in the app. It only tells us that this value has been set and saved to the storage.
      *
      * The true representation of whether sync is truly connected is determined by [SyncManager], and in combination
      * with other states like presence of an authenticated account, with the right scope, etc.

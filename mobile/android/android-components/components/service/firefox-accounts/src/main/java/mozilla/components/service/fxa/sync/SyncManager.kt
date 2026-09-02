@@ -8,6 +8,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.work.WorkInfo
 import java.io.Closeable
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.StateFlow
 import mozilla.components.concept.storage.KeyProvider
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
@@ -131,6 +132,14 @@ internal abstract class SyncManager(private val syncConfig: SyncConfig) {
     // a more robust internal observer API (dispatcher -> manager).
     // Currently the interfaces are the same, hence the name "pass-through".
     private val dispatcherStatusObserver = PassThroughSyncStatusObserver(syncStatusObserverRegistry)
+
+    /** Emits whether or not sync is connected on this device. Stays `false` until [initialize] has been called. */
+    abstract val syncConnected: StateFlow<Boolean>
+
+    /**
+     * Initializes the manager.
+     */
+    internal abstract suspend fun initialize()
 
     /** Indicates if sync is currently running. */
     internal fun isSyncActive() = syncDispatcher?.isSyncActive() ?: false
