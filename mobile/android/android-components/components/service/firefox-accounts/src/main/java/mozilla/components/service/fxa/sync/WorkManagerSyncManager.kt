@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import mozilla.appservices.fxaclient.FxaException
 import mozilla.appservices.sync15.SyncTelemetryPing
@@ -42,6 +43,7 @@ import mozilla.appservices.syncmanager.SyncEngineSelection
 import mozilla.appservices.syncmanager.SyncParams
 import mozilla.appservices.syncmanager.SyncTelemetry
 import mozilla.components.concept.storage.KeyProvider
+import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.FxaDeviceSettingsCache
@@ -49,6 +51,7 @@ import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.manager.GlobalAccountManager
 import mozilla.components.service.fxa.manager.SCOPE_SYNC
 import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.service.fxa.sync.ConnectResult.AuthRequiredReason
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.observer.Observable
 import mozilla.components.support.base.observer.ObserverRegistry
@@ -117,9 +120,44 @@ internal class WorkManagerSyncManager(
         syncStateStorage.syncConnectedFlow.collect { storedState ->
             // A `null` stored state means sync was never explicitly connected or disconnected, in which case we
             // assume it is connected: the user may be coming from a version where sync was always on.
-            syncConnected.update { accountManager.authenticatedAccount() != null && storedState != false }
+            syncConnected.value = accountManager.authenticatedAccount() != null && storedState != false
         }
     }
+
+    override suspend fun connect(params: ConnectParams): ConnectResult =
+        withContext(coroutineContext) {
+            connectionMutex.withLock {
+                logger.info("connect - setting up sync")
+
+                val authRequiredReason = checkAuthRequired(accountManager.connectedAccount())
+                if (authRequiredReason != null) {
+                    logger.info("connect - authentication required because $authRequiredReason")
+
+                    // in bug 2066516, we will know exactly how to support additive scopes
+                    // e.g. if the user was previously signed in to another service, we need to make sure
+                    // this does not reset their existing authentication
+                    ConnectResult.AuthRequired(
+                        scopes = setOf(SCOPE_SYNC),
+                        service = "sync",
+                        reason = authRequiredReason,
+                    )
+                } else {
+                    syncStateStorageProvider.get().storeSyncConnected(connected = true)
+
+                    // Call start only if we don't already have a sync dispatcher
+                    if (syncDispatcher == null) start()
+                    if (params.initiateSync) {
+                        now(
+                            reason = params.reason,
+                            debounce = false,
+                            customEngineSubset = params.engines.toList(),
+                        )
+                    }
+
+                    ConnectResult.Success
+                }
+            }
+        }
 
     override fun createDispatcher(supportedEngines: Set<SyncEngine>): SyncDispatcher {
         return WorkManagerSyncDispatcher(
@@ -132,6 +170,14 @@ internal class WorkManagerSyncManager(
     override fun dispatcherUpdated(dispatcher: SyncDispatcher) {
         WorkersLiveDataObserver.setDispatcher(dispatcher)
     }
+
+    /** Returns why authentication is required before sync can be connected, or `null` if it is not required. */
+    private fun checkAuthRequired(account: OAuthAccount?): AuthRequiredReason? =
+        when {
+            account == null -> AuthRequiredReason.NoAuthenticatedAccount
+            !account.hasScope(SCOPE_SYNC) -> AuthRequiredReason.MissingSyncScope
+            else -> null
+        }
 }
 
 /**

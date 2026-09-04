@@ -7,24 +7,32 @@ package mozilla.components.service.fxa.sync
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.WorkQuery
 import androidx.work.WorkerParameters
 import androidx.work.impl.utils.taskexecutor.TaskExecutor
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import mozilla.components.concept.sync.AccessTokenInfo
 import mozilla.components.concept.sync.OAuthScopedKey
+import mozilla.components.concept.sync.PeriodicSyncConfig
 import mozilla.components.concept.sync.SyncConfig
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.TestOAuthAccount
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.manager.GlobalAccountManager
 import mozilla.components.service.fxa.manager.SCOPE_SYNC
+import mozilla.components.service.fxa.sync.ConnectResult.AuthRequiredReason
 import mozilla.components.service.fxa.sync.WorkManagerSyncWorker.Companion.SYNC_STAGGER_BUFFER_MS
 import mozilla.components.service.fxa.sync.WorkManagerSyncWorker.Companion.engineSyncTimestamp
 import mozilla.components.service.fxa.sync.helpers.TestSyncStateStorage
@@ -117,45 +125,46 @@ class WorkManagerSyncManagerTest {
     }
 
     @Test
-    fun `WHEN workerStateChanged receives null state THEN nothing happens`() {
-        val observer = FakeSyncStatusObserver()
-        val syncManager = createSyncManager()
+    fun `WHEN workerStateChanged receives null state THEN nothing happens`() =
+        runTest(testDispatcher) {
+            val observer = FakeSyncStatusObserver()
+            val syncManager = createSyncManager(initialize = false)
 
-        syncManager.syncDispatcher?.workersStateChanged(null)
+            syncManager.syncDispatcher?.workersStateChanged(null)
 
-        assertTrue(observer.events.isEmpty())
-        assertFalse(syncManager.isSyncActive())
-    }
-
-    @Test
-    fun `WHEN workerStateChanged receives empty list THEN nothing happens`() {
-        val observer = FakeSyncStatusObserver()
-        val syncManager = createSyncManager(observer)
-
-        syncManager.syncDispatcher?.workersStateChanged(emptyList())
-
-        assertTrue(observer.events.isEmpty())
-        assertFalse(syncManager.isSyncActive())
-    }
+            assertTrue(observer.events.isEmpty())
+            assertFalse(syncManager.isSyncActive())
+        }
 
     @Test
-    fun `WHEN workerStateChanged receives ENQUEUED state THEN nothing happens`() {
-        val observer = FakeSyncStatusObserver()
-        val syncManager = createSyncManager(observer)
+    fun `WHEN workerStateChanged receives empty list THEN nothing happens`() =
+        runTest(testDispatcher) {
+            val observer = FakeSyncStatusObserver()
+            val syncManager = createSyncManager(observer = observer, initialize = false)
 
-        syncManager.syncDispatcher?.workersStateChanged(listOf(WorkInfo.State.ENQUEUED))
+            syncManager.syncDispatcher?.workersStateChanged(emptyList())
 
-        assertTrue(observer.events.isEmpty())
-        assertFalse(syncManager.isSyncActive())
-    }
+            assertTrue(observer.events.isEmpty())
+            assertFalse(syncManager.isSyncActive())
+        }
+
+    @Test
+    fun `WHEN workerStateChanged receives ENQUEUED state THEN nothing happens`() =
+        runTest(testDispatcher) {
+            val observer = FakeSyncStatusObserver()
+            val syncManager = createSyncManager(observer = observer, initialize = false)
+
+            syncManager.syncDispatcher?.workersStateChanged(listOf(WorkInfo.State.ENQUEUED))
+
+            assertTrue(observer.events.isEmpty())
+            assertFalse(syncManager.isSyncActive())
+        }
 
     @Test
     fun `GIVEN sync decoupling is off, and an authenticated account exists, THEN sync is connected`() =
         runTest(testDispatcher) {
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
-            val syncManager = createSyncManager(syncConfig = defaultSyncConfig)
-
-            syncManager.initialize()
+            val syncManager = createSyncManager(syncConfig = defaultSyncConfig, initialize = true)
             runCurrent()
 
             assertTrue(syncManager.syncConnected.value)
@@ -165,7 +174,7 @@ class WorkManagerSyncManagerTest {
     fun `GIVEN sync decoupling is off, and no authenticated account exists, THEN sync is not connected`() =
         runTest(testDispatcher) {
             whenever(accountManager.authenticatedAccount()).thenReturn(null)
-            val syncManager = createSyncManager(syncConfig = defaultSyncConfig)
+            val syncManager = createSyncManager(syncConfig = defaultSyncConfig, initialize = false)
 
             syncManager.initialize()
             runCurrent()
@@ -179,9 +188,12 @@ class WorkManagerSyncManagerTest {
             val syncStateStorage = TestSyncStateStorage()
             syncStateStorage.storeSyncConnected(connected = false)
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
-            val syncManager = createSyncManager(syncConfig = defaultSyncConfig, syncStateStorage = syncStateStorage)
-
-            syncManager.initialize()
+            val syncManager =
+                createSyncManager(
+                    syncConfig = defaultSyncConfig,
+                    syncStateStorage = syncStateStorage,
+                    initialize = true,
+                )
             runCurrent()
 
             assertTrue(syncManager.syncConnected.value, "Sync should be connected without sync decoupling")
@@ -191,7 +203,7 @@ class WorkManagerSyncManagerTest {
     fun `GIVEN sync decoupling is on, and no authenticated account exists, THEN sync is not connected`() =
         runTest(testDispatcher) {
             whenever(accountManager.authenticatedAccount()).thenReturn(null)
-            val syncManager = createSyncManager(syncConfig = syncConfigWithDecoupling)
+            val syncManager = createSyncManager(initialize = false, syncConfig = syncConfigWithDecoupling)
 
             syncManager.initialize()
             runCurrent()
@@ -203,7 +215,7 @@ class WorkManagerSyncManagerTest {
     fun `GIVEN sync decoupling is on, an authenticated account exists, BUT sync state was never set, THEN sync is connected`() =
         runTest(testDispatcher) {
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
-            val syncManager = createSyncManager(syncConfig = syncConfigWithDecoupling)
+            val syncManager = createSyncManager(initialize = false, syncConfig = syncConfigWithDecoupling)
 
             syncManager.initialize()
             runCurrent()
@@ -218,7 +230,11 @@ class WorkManagerSyncManagerTest {
             syncStateStorage.storeSyncConnected(connected = false)
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
             val syncManager =
-                createSyncManager(syncConfig = syncConfigWithDecoupling, syncStateStorage = syncStateStorage)
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = syncConfigWithDecoupling,
+                    syncStateStorage = syncStateStorage,
+                )
 
             syncManager.initialize()
             runCurrent()
@@ -233,7 +249,11 @@ class WorkManagerSyncManagerTest {
             syncStateStorage.storeSyncConnected(connected = true)
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
             val syncManager =
-                createSyncManager(syncConfig = syncConfigWithDecoupling, syncStateStorage = syncStateStorage)
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = syncConfigWithDecoupling,
+                    syncStateStorage = syncStateStorage,
+                )
 
             syncManager.initialize()
             runCurrent()
@@ -248,7 +268,11 @@ class WorkManagerSyncManagerTest {
             syncStateStorage.storeSyncConnected(connected = true)
             whenever(accountManager.authenticatedAccount()).thenReturn(TestAccount())
             val syncManager =
-                createSyncManager(syncConfig = syncConfigWithDecoupling, syncStateStorage = syncStateStorage)
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = syncConfigWithDecoupling,
+                    syncStateStorage = syncStateStorage,
+                )
             syncManager.initialize()
             runCurrent()
             assertTrue(syncManager.syncConnected.value, "Sync should be connected to begin with")
@@ -259,11 +283,183 @@ class WorkManagerSyncManagerTest {
             assertFalse(syncManager.syncConnected.value, "Sync should no longer be connected")
         }
 
-    private fun createSyncManager(
+    @Test
+    fun `GIVEN no connected account exists, WHEN connect is called, THEN authentication is required`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(null)
+
+            val syncManager = createSyncManager(initialize = false)
+
+            val result = syncManager.connect(params = ConnectParams())
+
+            assertAuthRequiredResult(result, AuthRequiredReason.NoAuthenticatedAccount)
+        }
+
+    @Test
+    fun `GIVEN connected account does not have sync scope, WHEN connect is called, THEN auth is required`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(TestAccount(initialScopes = setOf("random_scope")))
+
+            val syncManager = createSyncManager(initialize = false)
+
+            val result = syncManager.connect(ConnectParams())
+
+            assertAuthRequiredResult(result, AuthRequiredReason.MissingSyncScope)
+        }
+
+    @Test
+    fun `GIVEN connected account has sync scope, WHEN connect is called, THEN storage reflects that sync is connected`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(TestAccount())
+
+            val syncStateStorage = TestSyncStateStorage()
+            val syncManager =
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = syncConfigWithDecoupling,
+                    syncStateStorage = syncStateStorage,
+                )
+
+            syncManager.connect(ConnectParams())
+
+            val syncConnectedInStorage = syncStateStorage.syncConnected
+            assertNotNull(syncConnectedInStorage, "Sync connected state in storage should not be null")
+            assertTrue(syncConnectedInStorage, "Sync connected should be true in storage")
+        }
+
+    @Test
+    fun `GIVEN a successful connect, WHEN syncConnected is observed, THEN syncConnected true is emitted`() =
+        runTest(testDispatcher) {
+            val account = TestAccount()
+            whenever(accountManager.connectedAccount()).thenReturn(account)
+            whenever(accountManager.authenticatedAccount()).thenReturn(account)
+
+            val syncStateStorage = TestSyncStateStorage()
+            val syncManager = createSyncManager(initialize = true, syncStateStorage = syncStateStorage)
+
+            val syncConnectedValues = mutableListOf<Boolean>()
+            backgroundScope.launch {
+                syncManager.syncConnected.collect { syncConnectedValues.add(it) }
+            }
+
+            syncManager.connect(ConnectParams())
+            runCurrent()
+
+            assertEquals(1, syncConnectedValues.size)
+            assertTrue(syncConnectedValues.last(), "Sync should be connected")
+        }
+
+    @Test
+    fun `GIVEN sync decoupling and sync disconnected in storage, WHEN connect is called, THEN syncConnected is true`() =
+        runTest(testDispatcher) {
+            val account = TestAccount()
+            whenever(accountManager.connectedAccount()).thenReturn(account)
+            whenever(accountManager.authenticatedAccount()).thenReturn(account)
+
+            val syncStateStorage = TestSyncStateStorage()
+            syncStateStorage.storeSyncConnected(connected = false)
+
+            val syncManager =
+                createSyncManager(
+                    syncStateStorage = syncStateStorage,
+                    syncConfig = syncConfigWithDecoupling,
+                    initialize = false,
+                )
+
+            val syncConnectedValues = mutableListOf<Boolean>()
+            backgroundScope.launch {
+                syncManager.syncConnected.collect { syncConnectedValues.add(it) }
+            }
+
+            syncManager.initialize()
+            runCurrent()
+
+            syncManager.connect(ConnectParams())
+            runCurrent()
+
+            assertEquals(
+                listOf(false, true),
+                syncConnectedValues,
+                "Sync should first be disconnected and then connected",
+            )
+        }
+
+    @Test
+    fun `GIVEN connected account with sync scope, WHEN connect is called with initiateSync=true, THEN immediate sync is initiated`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(TestAccount())
+
+            val syncManager =
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = defaultSyncConfig,
+                    start = false,
+                )
+
+            syncManager.connect(ConnectParams(initiateSync = true))
+
+            val workManager = WorkManager.getInstance(testContext)
+            val immediateWork =
+                workManager.getWorkInfos(WorkQuery.fromUniqueWorkNames(SyncWorkerName.Immediate.name)).get()
+            assertEquals(1, immediateWork.size, "Unexpected count of immediate sync work")
+        }
+
+    @Test
+    fun `GIVEN connected account with sync scope, WHEN connect is called with initiateSync=false, THEN no immediate sync is initiated`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(TestAccount())
+
+            val syncManager =
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = defaultSyncConfig.copy(periodicSyncConfig = PeriodicSyncConfig()),
+                    start = false,
+                )
+
+            syncManager.connect(ConnectParams(initiateSync = false))
+
+            val workManager = WorkManager.getInstance(testContext)
+            val immediateWork =
+                workManager.getWorkInfos(WorkQuery.fromUniqueWorkNames(SyncWorkerName.Immediate.name)).get()
+            assertEquals(0, immediateWork.size, "Unexpected count of immediate sync work")
+        }
+
+    @Test
+    fun `GIVEN connected account with sync scope and no periodic sync configured, WHEN connect is called, THEN no periodic sync is initiated`() =
+        runTest(testDispatcher) {
+            whenever(accountManager.connectedAccount()).thenReturn(TestAccount())
+
+            val syncManager =
+                createSyncManager(
+                    initialize = false,
+                    syncConfig = syncConfigWithDecoupling.copy(periodicSyncConfig = null),
+                    start = true,
+                )
+
+            syncManager.connect(ConnectParams(initiateSync = false))
+
+            val periodicWork =
+                WorkManager.getInstance(testContext)
+                    .getWorkInfos(WorkQuery.fromUniqueWorkNames(SyncWorkerName.Periodic.name))
+                    .get()
+            assertTrue(periodicWork.isEmpty(), "Expected no periodic sync work")
+        }
+
+    /** Asserts the [result] is a [ConnectResult.AuthRequired] carrying [expectedReason] */
+    private fun assertAuthRequiredResult(result: ConnectResult, expectedReason: AuthRequiredReason) {
+        assertIs<ConnectResult.AuthRequired>(result)
+        assertEquals("sync", result.service)
+        assertEquals(setOf(SCOPE_SYNC), result.scopes)
+        assertEquals(expectedReason, result.reason)
+    }
+
+    private suspend fun createSyncManager(
+        initialize: Boolean,
         observer: FakeSyncStatusObserver = FakeSyncStatusObserver(),
         syncStateStorage: SyncStateStorage = TestSyncStateStorage(),
         syncConfig: SyncConfig = defaultSyncConfig,
         syncStateStorageProvider: SyncStateStorage.Provider = SyncStateStorage.Provider { syncStateStorage },
+        start: Boolean = true,
     ): WorkManagerSyncManager =
         WorkManagerSyncManager(
                 context = testContext,
@@ -274,10 +470,12 @@ class WorkManagerSyncManagerTest {
             )
             .apply {
                 registerSyncStatusObserver(observer)
-                start()
+                if (initialize) initialize()
+                if (start) start()
             }
 
-    private class TestAccount : TestOAuthAccount() {
+    private class TestAccount(initialScopes: Set<String> = setOf(SCOPE_SYNC)) : TestOAuthAccount() {
+        private val grantedScopes: MutableSet<String> = initialScopes.toMutableSet()
 
         override suspend fun getAccessToken(singleScope: String): AccessTokenInfo {
             return AccessTokenInfo(
@@ -296,6 +494,10 @@ class WorkManagerSyncManagerTest {
 
         override suspend fun getTokenServerEndpointURL(): String {
             return "token server url"
+        }
+
+        override fun hasScope(scope: String): Boolean {
+            return grantedScopes.contains(scope)
         }
     }
 }
