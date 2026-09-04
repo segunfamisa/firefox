@@ -160,6 +160,9 @@ internal abstract class SyncManager(private val syncConfig: SyncConfig) {
      */
     abstract suspend fun connect(params: ConnectParams): ConnectResult
 
+    /** Disconnect sync on this device. */
+    abstract suspend fun disconnect()
+
     /**
      * Request an immediate synchronization of all configured stores.
      *
