@@ -9,6 +9,8 @@ plugins {
     id 'org.mozilla.conventions.zip-test-reports'
     id 'org.mozilla.nimbus-gradle-plugin'
     id 'ApkSizePlugin'
+    id 'AndroidTestKeepRulesPlugin'
+    id 'ObfuscationReportPlugin'
     id 'jacoco'
     alias(libs.plugins.androidx.safeargs)
     alias(libs.plugins.dependency.analysis)
@@ -85,11 +87,8 @@ android {
         // `-dontobfuscate` is swapped for everything obfuscation needs to survive.
         if (project.hasProperty("enableObfuscation")) {
             proguardFile 'proguard-rules-obfuscation.pro'
-            if (project.hasProperty("testBuildType")) {
-                // Generated: the app-side members the androidTest APK reaches into, which R8 would
-                // otherwise shrink away. Regenerate when androidTest sources or deps change.
-                proguardFile 'proguard-rules-androidtest-inferred.pro'
-            }
+            // The app-side members the androidTest APK reaches into are kept by rules that
+            // AndroidTestKeepRulesPlugin infers at build time and adds to this variant directly.
         } else {
             proguardFile 'proguard-rules-dontobfuscate.pro'
         }
