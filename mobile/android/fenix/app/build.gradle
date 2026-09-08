@@ -81,6 +81,21 @@ android {
         shrinkResources = !project.hasProperty("disableOptimization")
         minifyEnabled = !project.hasProperty("disableOptimization")
         proguardFiles = [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro']
+        // Bug 1987619. Without the flag this is exactly the rule set we ship today; with it,
+        // `-dontobfuscate` is swapped for everything obfuscation needs to survive.
+        if (project.hasProperty("enableObfuscation")) {
+            proguardFile 'proguard-rules-obfuscation.pro'
+            if (project.hasProperty("testBuildType")) {
+                // Generated: the app-side members the androidTest APK reaches into, which R8 would
+                // otherwise shrink away. Regenerate when androidTest sources or deps change.
+                proguardFile 'proguard-rules-androidtest-inferred.pro'
+            }
+        } else {
+            proguardFile 'proguard-rules-dontobfuscate.pro'
+        }
+        // Only consulted when AGP minifies the androidTest APK, which it does whenever the app
+        // under test is minified.
+        testProguardFiles 'proguard-rules-androidtest.pro'
         matchingFallbacks = ['release'] // Use on the "release" build type in dependencies (AARs)
 
         // Present in release builds.
