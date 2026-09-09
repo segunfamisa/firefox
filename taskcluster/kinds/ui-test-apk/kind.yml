@@ -239,6 +239,30 @@ tasks:
         treeherder:
             symbol: fenix-nightly(ui-test-arm-nightly)
 
+    # Bug 1987619. The same suite the debug lane runs, but against an R8-obfuscated Nightly build.
+    # Never scheduled automatically; `mach try fuzzy --full` or the android-fenix-obfuscated preset.
+    fenix-arm-nightly-obfuscated:
+        attributes:
+            build-type: fenix-nightly-obfuscated
+        task-context:
+            from-object:
+                app-name: fenix
+        description: Test Fenix against an obfuscated Nightly build
+        dependencies:
+            signed-apk-debug-apk: signing-apk-fenix-nightly-obfuscated
+            signed-apk-android-test: signing-apk-fenix-android-test-nightly-obfuscated
+        fetches:
+            signed-apk-debug-apk:
+                - artifact: target.arm64-v8a.apk
+                  extract: false
+            signed-apk-android-test:
+                - artifact: target.noarch.apk
+                  extract: false
+        run-on-projects: []
+        flank-config: fenix/arm64-v8a-obfuscated.yml
+        treeherder:
+            symbol: fenix-nightly(ui-test-arm-obf)
+
     fenix-legacy-arm:
         attributes:
             build-type: fenix-legacy

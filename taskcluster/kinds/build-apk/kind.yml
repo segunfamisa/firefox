@@ -390,30 +390,6 @@ tasks:
     # with the nightly/beta key. The Firebase testing infrastructure requires both the androidTest APK
     # and the APK under test to be signed with the same key. Thus, the nightly APK being signed with
     # nightly means we need an androidTest APK with the same signature.
-
-    focus-android-test-nightly:
-        description: 'Focus Nightly Android Test for debugging'
-        dependencies:
-            build-fat-aar: build-fat-aar-android-geckoview-fat-aar/opt
-        disable-optimization: true
-        run:
-            clone-with: hg
-            gradle-build-type: androidTest
-            gradle-build-name: androidTest
-            gradle-build: focus
-            test-build-type: nightly
-        run-on-projects: [trunk]
-        source-project-name: "focus-android"
-        apk-artifact-template:
-            path: '/builds/worker/workspace/obj-build/gradle/build/mobile/android/focus-android/app/outputs/apk/androidTest/focus/nightly/app-focus-nightly-androidTest.apk'
-        treeherder:
-            symbol: focus-nightly(Bat)
-            platform: focus-android-all/opt
-
-    # android-test-nightly and android-test-beta, while still being debug builds, are meant to be signed
-    # with the nightly/beta key. The Firebase testing infrastructure requires both the androidTest APK
-    # and the APK under test to be signed with the same key. Thus, the nightly APK being signed with
-    # nightly means we need an androidTest APK with the same signature.
     #
     # TODO: See if we can tweak the signing kind to make 2 signing jobs out of a single `android-test`
     # job.
@@ -442,6 +418,52 @@ tasks:
             symbol: fenix-nightly(Bat)
             platform: fenix-android-all/opt
 
+    # Bug 1987619. Same as fenix-nightly-firebase but with R8 obfuscation on: no
+    # `disable-optimization`, so minifyEnabled stays true and -PenableObfuscation has something to
+    # act on. Nightly is already non-debuggable, so R8 compiles in release mode and actually
+    # renames -- a debuggable variant makes R8 skip the minifier entirely. Never scheduled
+    # automatically; select it on try with `mach try fuzzy --full`.
+    fenix-nightly-obfuscated:
+        description: 'Fenix Nightly build with obfuscation enabled, for UI tests'
+        dependencies:
+            build-fat-aar: build-fat-aar-android-geckoview-fat-aar/opt
+        run:
+            clone-with: hg
+            gradle-build-type: nightly
+            gradle-build-name: nightly
+            gradle-build: fenix
+            gradle-extra-options:
+                - -PenableObfuscation
+            test-build-type: nightly
+        run-on-projects: []
+        source-project-name: "fenix"
+        treeherder:
+            symbol: fenix-nightly(Bobf)
+            platform: fenix-android-all/opt
+
+    # The androidTest APK for fenix-nightly-obfuscated. AGP only minifies the test APK when the app
+    # under test is minified and applies the app's mapping to it, so both builds must agree on
+    # -PenableObfuscation.
+    fenix-android-test-nightly-obfuscated:
+        description: 'Fenix androidTest APK built against the obfuscated Nightly app'
+        dependencies:
+            build-fat-aar: build-fat-aar-android-geckoview-fat-aar/opt
+        apk-artifact-template:
+            path: '/builds/worker/workspace/obj-build/gradle/build/mobile/android/fenix/app/outputs/apk/androidTest/nightly/app-nightly-androidTest.apk'
+        run:
+            clone-with: hg
+            gradle-build-type: androidTest
+            gradle-build-name: androidTest
+            gradle-build: fenix
+            gradle-extra-options:
+                - -PenableObfuscation
+            test-build-type: nightly
+        run-on-projects: []
+        source-project-name: "fenix"
+        treeherder:
+            symbol: fenix-nightly(Batobf)
+            platform: fenix-android-all/opt
+
     focus-android-test-beta:
         description: 'Focus Beta Android Test for debugging'
         dependencies:
@@ -460,6 +482,32 @@ tasks:
         treeherder:
             symbol: focus-beta(Bat)
             platform: focus-android-all/opt
+
+    focus-android-test-nightly:
+        description: 'Focus Nightly Android Test for debugging'
+        dependencies:
+            build-fat-aar: build-fat-aar-android-geckoview-fat-aar/opt
+        disable-optimization: true
+        run:
+            clone-with: hg
+            gradle-build-type: androidTest
+            gradle-build-name: androidTest
+            gradle-build: focus
+            test-build-type: nightly
+        run-on-projects: [trunk]
+        source-project-name: "focus-android"
+        apk-artifact-template:
+            path: '/builds/worker/workspace/obj-build/gradle/build/mobile/android/focus-android/app/outputs/apk/androidTest/focus/nightly/app-focus-nightly-androidTest.apk'
+        treeherder:
+            symbol: focus-nightly(Bat)
+            platform: focus-android-all/opt
+
+    # android-test-nightly and android-test-beta, while still being debug builds, are meant to be signed
+    # with the nightly/beta key. The Firebase testing infrastructure requires both the androidTest APK
+    # and the APK under test to be signed with the same key. Thus, the nightly APK being signed with
+    # nightly means we need an androidTest APK with the same signature.
+    #
+    # TODO: See if we can tweak the signing kind to make 2 signing jobs out of a single `android-test`
 
     fenix-android-test-beta:
         description: 'Fenix Beta Android Test for debugging'

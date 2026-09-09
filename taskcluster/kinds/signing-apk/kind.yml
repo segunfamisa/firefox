@@ -47,6 +47,11 @@ tasks:
                     klar-.*: Bkls
                     fenix-android-test.+: Bats
                     fenix-android-test-mozillaonline: Bats-mo
+                    # Exact keys, so they win over the `fenix-android-test.+`
+                    # regex above and stay distinct from the non-obfuscated
+                    # nightly signing tasks in the same treeherder group.
+                    fenix-nightly-obfuscated: Bobfs
+                    fenix-android-test-nightly-obfuscated: Batobfs
                     fenix-beta-firebase: Bfs
                     fenix-nightly-firebase: Bfs
                     fenix-nightly-nobp: Bfnbps

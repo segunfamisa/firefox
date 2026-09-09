@@ -665,6 +665,14 @@ dependencies {
     androidTestImplementation libs.androidx.concurrent
     androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.compose.ui.test
+    // createComposeRule() launches androidx.activity.ComponentActivity through ActivityScenario,
+    // which needs that activity declared in the manifest of the app under test. src/debug declares
+    // it by hand; other variants do not. It cannot be an androidTestImplementation -- that puts it
+    // in the test APK's package and Instrumentation rejects the cross-package launch with
+    // "Intent in process org.mozilla.fenix resolved to different process org.mozilla.fenix.test".
+    if (project.hasProperty("enableObfuscation") && project.hasProperty("testBuildType")) {
+        add("${project.property('testBuildType')}Implementation", libs.androidx.compose.ui.test.manifest)
+    }
     androidTestImplementation libs.androidx.test.core
     androidTestImplementation(libs.androidx.test.espresso.contrib) {
         exclude module: 'protobuf-lite'

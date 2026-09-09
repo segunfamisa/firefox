@@ -68,6 +68,15 @@ android-fenix:
         - "^source-test 'fenix"
         - "'generate-baseline-profile-firebase-fenix-simulation"
 
+android-fenix-obfuscated:
+    selector: fuzzy
+    full: true
+    description: >-
+        Build Fenix Nightly with R8 obfuscation enabled and run the UI tests against it.
+        See bug 1987619. The build and signing tasks come in through the dependency graph.
+    query:
+        - "'ui-test-apk-fenix-arm-nightly-obfuscated"
+
 android-fenix-prototype:
     selector: fuzzy
     full: true

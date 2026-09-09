@@ -1,0 +1,96 @@
+# Google Cloud Documentation: https://cloud.google.com/sdk/gcloud/reference/firebase/test/android/run
+# Flank Documentation: https://flank.github.io/flank/
+#
+# arm64-v8a.yml pointed at an obfuscated Nightly build instead of Debug (bug 1987619). The suite has
+# only ever run against Debug, so a number of tests depend on behaviour that exists only there. Those
+# are excluded below, grouped by cause, so that a red run on this lane means obfuscation broke
+# something rather than "Nightly is not Debug".
+#
+# Nothing here is excluded because of R8. Every exclusion reproduces with `disable-optimization: true`.
+gcloud:
+  results-bucket: fenix_test_artifacts
+  record-video: true
+  timeout: 15m
+  async: false
+  num-flaky-test-attempts: 1
+
+  app: /app/path
+  test: /test/path
+
+  auto-google-login: false
+  use-orchestrator: true
+  environment-variables:
+    clearPackageData: true
+  directories-to-pull:
+    - /sdcard/Android/data/org.mozilla.fenix/minidumps
+  # No geckoview-config.yaml: GeckoRuntime only reads /data/local/tmp/$PACKAGE-geckoview-config.yaml
+  # when android:debuggable="true", and this build is not debuggable, so it would be ignored. That
+  # also means MOZ_FORCE_ENABLE_FISSION is not set on this lane.
+  performance-metrics: true
+
+  test-targets:
+    - notPackage org.mozilla.fenix.syncintegration
+    - notPackage org.mozilla.fenix.experimentintegration
+    - notPackage org.mozilla.fenix.ui.efficiency.tests
+    - notPackage org.mozilla.fenix.ui.efficiency.devtools
+    - notPackage org.mozilla.fenix.ui.efficiency.generation.reachability.shards
+    - notPackage org.mozilla.fenix.ui.efficiency.generation.pairs.shards
+    - notPackage org.mozilla.fenix.ui.efficiency.generation.interaction.shards
+    - notPackage org.mozilla.fenix.ui.efficiency.generation.behavior.shards
+
+    # mockk's inline mock maker attaches a JVMTI agent to the process under test, which requires
+    # android:debuggable="true" on the app. Setting that makes AGP run R8 in debug compilation mode,
+    # which skips the minifier entirely -- so debuggable and obfuscated are mutually exclusive and
+    # these can never run on this lane.
+    - notClass org.mozilla.fenix.gecko.CrashPullDelegateTest
+    - notClass org.mozilla.fenix.onboarding.view.OnboardingMapperTest
+    - notClass org.mozilla.fenix.ui.UnsubmittedCrashDialogTest
+    - notClass org.mozilla.fenix.ui.NimbusEventTest#telemetryAccountObserverTest
+
+    # Load test web extensions from resource://android/assets/extensions/, which GeckoView resolves
+    # against the app's own assets. Those assets live in src/debug/assets only.
+    - notClass org.mozilla.fenix.ui.ExtensionPrivateBrowsingTest
+    - notClass org.mozilla.fenix.ui.ExtensionOptionsFilePickerTest
+
+    # DefaultTopSitesBinding skips seeding initial_shortcuts.json when
+    # `Config.channel.isReleased && region == RegionState.Default`, and isReleased is false only for
+    # the Debug channel. On a Test Lab device with no region signal, Nightly therefore has no default
+    # top sites, so neither the Wikipedia tile nor a sponsored tile at index 2 ever appears.
+    - notClass org.mozilla.fenix.ui.TopSitesTest
+    - notClass org.mozilla.fenix.ui.SponsoredShortcutsTest#verifySponsoredShortcutsDetailsTest
+    - notClass org.mozilla.fenix.ui.SponsoredShortcutsTest#verifySponsoredShortcutsListTest
+    - notClass org.mozilla.fenix.ui.SponsoredShortcutsTest#verifySponsoredShortcutsListWithEightPinnedSitesTest
+    - notClass org.mozilla.fenix.ui.SponsoredShortcutsTest#verifySponsoredShortcutsListWithSevenPinnedSitesTest
+    - notClass org.mozilla.fenix.ui.HomeScreenTest#homeScreenItemsTest
+    - notClass org.mozilla.fenix.ui.SettingsHomepageTest#verifyShortcutOptionTest
+    - notClass org.mozilla.fenix.ui.SettingsAddonsTest#noCrashWithAddonInstalledTest
+
+    # Assert on Debug-only build outputs: LeakCanary is a debugImplementation dependency, and
+    # BuildConfig.VCS_HASH is empty on Debug but set on Nightly, which AboutFragment appends to the
+    # version line the test matches.
+    - notClass org.mozilla.fenix.ui.SettingsAdvancedTest#verifyAdvancedSettingsSectionItemsTest
+    - notClass org.mozilla.fenix.ui.SettingsAboutTest#verifyAboutFirefoxMenuAppDetailsItemTest
+
+    # A heuristic counter that is designed to fail whenever the count changes; a different build
+    # variant changing it is the test working as intended, not a regression.
+    - notClass org.mozilla.fenix.perf.StartupExcessiveResourceUseTest
+
+    # Cause not yet established -- excluded to keep the lane's signal readable, not because they are
+    # known-good. Compare against ui-test-apk-fenix-arm-debug on the same revision to classify them.
+    - notClass org.mozilla.fenix.ui.SettingsSearchTest#verifyManageSearchShortcutsSettingsItemsTest
+    - notClass org.mozilla.fenix.ui.SettingsSearchTest#verifySearchShortcutChangesAreReflectedInSearchSelectorMenuTest
+    - notClass org.mozilla.fenix.ui.TextSelectionTest#verifyCopyUrlBarTextSelectionOptionTest
+    - notClass org.mozilla.fenix.ui.TextSelectionTest#verifyCutUrlBarTextSelectionOptionTest
+    - notClass org.mozilla.fenix.ui.DownloadTest#warningWhenClosingPrivateTabsWhileDownloadingTest
+
+  device:
+    - model: MediumPhone.arm
+      version: 34
+      locale: en_US
+
+flank:
+  project: GOOGLE_PROJECT
+  max-test-shards: 100
+  num-test-runs: 1
+  output-style: compact
+  full-junit-result: true
