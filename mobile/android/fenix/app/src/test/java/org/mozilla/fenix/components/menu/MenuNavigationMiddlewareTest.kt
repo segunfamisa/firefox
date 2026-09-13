@@ -17,6 +17,10 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import mozilla.appservices.places.BookmarkRoot
 import mozilla.components.browser.state.action.BrowserAction
@@ -54,6 +58,7 @@ import org.mozilla.fenix.components.menu.middleware.MenuNavigationMiddleware
 import org.mozilla.fenix.components.menu.store.BookmarkState
 import org.mozilla.fenix.components.menu.store.BrowserMenuState
 import org.mozilla.fenix.components.menu.store.MenuAction
+import org.mozilla.fenix.components.menu.store.MenuEffect
 import org.mozilla.fenix.components.menu.store.MenuState
 import org.mozilla.fenix.components.menu.store.MenuStore
 import org.mozilla.fenix.components.share.ShareSource
@@ -82,6 +87,7 @@ class MenuNavigationMiddlewareTest {
     private val webAppUseCases: WebAppUseCases = mockk(relaxed = true)
     private val settings: Settings = mockk(relaxed = true)
     private val shareUseCases: ShareUseCases = mockk(relaxed = true)
+    private val collectedEffects = mutableListOf<MenuEffect>()
 
     @Test
     fun `GIVEN account state is authenticated WHEN navigate to Mozilla account action is dispatched THEN dispatch navigate action to Mozilla account settings`() =
@@ -273,12 +279,10 @@ class MenuNavigationMiddlewareTest {
     fun `GIVEN current site is installable WHEN navigate to add to home screen is dispatched THEN invoke add to home screen use case`() =
         runTest {
             val tab = createTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             every { webAppUseCases.isInstallable() } returns true
@@ -287,7 +291,7 @@ class MenuNavigationMiddlewareTest {
             testScheduler.advanceUntilIdle()
 
             coVerify(exactly = 1) { webAppUseCases.addToHomescreen() }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -498,12 +502,10 @@ class MenuNavigationMiddlewareTest {
                     url = url,
                     title = title,
                 )
-            var dismissWasCalled = false
 
             val store =
                 createStore(
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                     scope = this,
                 )
 
@@ -521,7 +523,7 @@ class MenuNavigationMiddlewareTest {
                     navigateToShareFragment = any(),
                 )
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -678,19 +680,15 @@ class MenuNavigationMiddlewareTest {
 
     @Test
     fun `WHEN navigate to discover more extensions action is dispatched THEN navigate to the AMO page`() = runTest {
-        var params: BrowserNavigationParams? = null
-        val store =
-            createStore(
-                scope = this,
-                openToBrowser = {
-                    params = it
-                },
-            )
+        val store = createStore(this)
 
         store.dispatch(MenuAction.Navigate.DiscoverMoreExtensions)
         testScheduler.advanceUntilIdle()
 
-        assertEquals(AMO_HOMEPAGE_FOR_ANDROID, params?.url)
+        assertEquals(
+            listOf(MenuEffect.OpenToBrowser(BrowserNavigationParams(url = AMO_HOMEPAGE_FOR_ANDROID))),
+            collectedEffects,
+        )
     }
 
     @Test
@@ -736,7 +734,6 @@ class MenuNavigationMiddlewareTest {
     fun `GIVEN the user is on a tab and telemetry is disabled WHEN the user clicks on the web compat button THEN send WebCompat info and open browser`() =
         runTest {
             every { settings.isTelemetryEnabled } returns false
-            var params: BrowserNavigationParams? = null
             val expectedTabUrl = "www.mozilla.org"
 
             var sendMoreWebCompatInfoCalled = false
@@ -762,9 +759,6 @@ class MenuNavigationMiddlewareTest {
                             browserMenuState = BrowserMenuState(selectedTab = createCustomTab(url = expectedTabUrl))
                         ),
                     webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
-                    openToBrowser = {
-                        params = it
-                    },
                 )
 
             store.dispatch(MenuAction.Navigate.WebCompatReporter)
@@ -772,7 +766,12 @@ class MenuNavigationMiddlewareTest {
 
             assertTrue(sendMoreWebCompatInfoCalled)
 
-            assertEquals("$WEB_COMPAT_REPORTER_URL$expectedTabUrl", params?.url)
+            assertEquals(
+                listOf(
+                    MenuEffect.OpenToBrowser(BrowserNavigationParams(url = "$WEB_COMPAT_REPORTER_URL$expectedTabUrl"))
+                ),
+                collectedEffects,
+            )
         }
 
     @Test
@@ -854,12 +853,10 @@ class MenuNavigationMiddlewareTest {
     fun `GIVEN user is on a tab and view history is false WHEN navigate back action is dispatched THEN navigate back`() =
         runTest {
             val tab = createTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -868,19 +865,17 @@ class MenuNavigationMiddlewareTest {
             verify {
                 sessionUseCases.goBack.invoke(tab.id)
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN user is on a custom tab and view history is false WHEN navigate back action is dispatched THEN navigate back`() =
         runTest {
             val customTab = createCustomTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = customTab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -889,7 +884,7 @@ class MenuNavigationMiddlewareTest {
             verify {
                 sessionUseCases.goBack.invoke(customTab.id)
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -899,13 +894,11 @@ class MenuNavigationMiddlewareTest {
         val engineMiddleware = EngineMiddleware.create(mockk())
         val captorMiddleware = CaptureActionsMiddleware<BrowserState, BrowserAction>()
         val browserStore = createBrowserStore(middlewares = listOf(captorMiddleware) + engineMiddleware)
-        var dismissWasCalled = false
         val store =
             createStore(
                 scope = this,
                 browserStore = browserStore,
                 menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                onDismiss = { dismissWasCalled = true },
             )
 
         store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -915,18 +908,16 @@ class MenuNavigationMiddlewareTest {
             assertEquals(tab.id, it.tabId)
         }
         verify(exactly = 0) { sessionUseCases.goBack.invoke(any()) }
-        assertTrue(dismissWasCalled)
+        assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
     }
 
     @Test
     fun `GIVEN tab on a home screen story URL WHEN navigating back THEN navigate to home`() = runTest {
         val tab = createTab(url = "https://story.test".markAsOpenedFromHomeScreen())
-        var dismissWasCalled = false
         val store =
             createStore(
                 scope = this,
                 menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                onDismiss = { dismissWasCalled = true },
             )
 
         store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -939,19 +930,17 @@ class MenuNavigationMiddlewareTest {
             )
         }
         verify(exactly = 0) { sessionUseCases.goBack.invoke(any()) }
-        assertTrue(dismissWasCalled)
+        assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
     }
 
     @Test
     fun `GIVEN tab on a stories screen story URL WHEN navigating back THEN navigate to the stories fragment`() =
         runTest {
             val tab = createTab(url = "https://story.test".markAsOpenedFromStoriesScreen())
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -964,7 +953,7 @@ class MenuNavigationMiddlewareTest {
                 )
             }
             verify(exactly = 0) { sessionUseCases.goBack.invoke(any()) }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -972,12 +961,10 @@ class MenuNavigationMiddlewareTest {
         runTest {
             val tab = createTab(url = "https://story.test".markAsOpenedFromHomeScreen())
             every { navController.popBackStack(R.id.homeFragment, false) } returns true
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -991,7 +978,7 @@ class MenuNavigationMiddlewareTest {
                 )
             }
             verify(exactly = 0) { sessionUseCases.goBack.invoke(any()) }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -999,12 +986,10 @@ class MenuNavigationMiddlewareTest {
         runTest {
             val tab = createTab(url = "https://story.test".markAsOpenedFromStoriesScreen())
             every { navController.popBackStack(R.id.storiesFragment, false) } returns true
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Back(viewHistory = false))
@@ -1018,7 +1003,7 @@ class MenuNavigationMiddlewareTest {
                 )
             }
             verify(exactly = 0) { sessionUseCases.goBack.invoke(any()) }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
@@ -1075,12 +1060,10 @@ class MenuNavigationMiddlewareTest {
     fun `GIVEN user is on a tab and view history is false WHEN navigate forward action is dispatched THEN navigate forward`() =
         runTest {
             val tab = createTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Forward(viewHistory = false))
@@ -1089,19 +1072,17 @@ class MenuNavigationMiddlewareTest {
             verify {
                 sessionUseCases.goForward.invoke(tab.id)
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN user is on a custom tab and view history is false WHEN navigate forward action is dispatched THEN navigate forward`() =
         runTest {
             val customTab = createCustomTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = customTab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Forward(viewHistory = false))
@@ -1110,19 +1091,17 @@ class MenuNavigationMiddlewareTest {
             verify {
                 sessionUseCases.goForward.invoke(customTab.id)
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN bypass cache is true WHEN navigate reload action is dispatched THEN reload with bypass cache flag`() =
         runTest {
             val tab = createTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Reload(bypassCache = true))
@@ -1134,19 +1113,17 @@ class MenuNavigationMiddlewareTest {
                     flags = LoadUrlFlags.select(LoadUrlFlags.BYPASS_CACHE),
                 )
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN user is on a tab and bypass cache is false WHEN navigate reload action is dispatched THEN reload with no flags`() =
         runTest {
             val tab = createTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Reload(bypassCache = false))
@@ -1158,19 +1135,17 @@ class MenuNavigationMiddlewareTest {
                     flags = LoadUrlFlags.none(),
                 )
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN user is on a custom tab and bypass cache is false WHEN navigate reload action is dispatched THEN reload with no flags`() =
         runTest {
             val customTab = createCustomTab(url = "https://www.mozilla.org")
-            var dismissWasCalled = false
             val store =
                 createStore(
                     scope = this,
                     menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = customTab)),
-                    onDismiss = { dismissWasCalled = true },
                 )
 
             store.dispatch(MenuAction.Navigate.Reload(bypassCache = false))
@@ -1182,18 +1157,16 @@ class MenuNavigationMiddlewareTest {
                     flags = LoadUrlFlags.none(),
                 )
             }
-            assertTrue(dismissWasCalled)
+            assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
         }
 
     @Test
     fun `GIVEN user is on a tab WHEN navigate stop action is dispatched THEN stop loading the page`() = runTest {
         val tab = createTab(url = "https://www.mozilla.org")
-        var dismissWasCalled = false
         val store =
             createStore(
                 scope = this,
                 menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = tab)),
-                onDismiss = { dismissWasCalled = true },
             )
 
         store.dispatch(MenuAction.Navigate.Stop)
@@ -1202,18 +1175,16 @@ class MenuNavigationMiddlewareTest {
         verify {
             sessionUseCases.stopLoading.invoke(tab.id)
         }
-        assertTrue(dismissWasCalled)
+        assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
     }
 
     @Test
     fun `GIVEN user is on a custom tab WHEN navigate stop action is dispatched THEN stop loading the page`() = runTest {
         val customTab = createCustomTab(url = "https://www.mozilla.org")
-        var dismissWasCalled = false
         val store =
             createStore(
                 scope = this,
                 menuState = MenuState(browserMenuState = BrowserMenuState(selectedTab = customTab)),
-                onDismiss = { dismissWasCalled = true },
             )
 
         store.dispatch(MenuAction.Navigate.Stop)
@@ -1222,35 +1193,37 @@ class MenuNavigationMiddlewareTest {
         verify {
             sessionUseCases.stopLoading.invoke(customTab.id)
         }
-        assertTrue(dismissWasCalled)
+        assertTrue(collectedEffects.contains(MenuEffect.Dismiss))
     }
 
-    private fun createStore(
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun TestScope.createStore(
         scope: CoroutineScope,
         browserStore: BrowserStore = createBrowserStore(),
         menuState: MenuState = MenuState(),
         webCompatReporterMoreInfoSender: WebCompatReporterMoreInfoSender = FakeWebCompatReporterMoreInfoSender(),
-        openToBrowser: (params: BrowserNavigationParams) -> Unit = {},
-        onDismiss: suspend () -> Unit = {},
     ) =
         MenuStore(
-            initialState = menuState,
-            middleware =
-                listOf(
-                    MenuNavigationMiddleware(
-                        browserStore = browserStore,
-                        navController = navController,
-                        openToBrowser = openToBrowser,
-                        sessionUseCases = sessionUseCases,
-                        webAppUseCases = webAppUseCases,
-                        shareUseCases = shareUseCases,
-                        settings = settings,
-                        onDismiss = onDismiss,
-                        scope = scope,
-                        webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
-                    )
-                ),
-        )
+                initialState = menuState,
+                middleware =
+                    listOf(
+                        MenuNavigationMiddleware(
+                            browserStore = browserStore,
+                            navController = navController,
+                            sessionUseCases = sessionUseCases,
+                            webAppUseCases = webAppUseCases,
+                            shareUseCases = shareUseCases,
+                            settings = settings,
+                            scope = scope,
+                            webCompatReporterMoreInfoSender = webCompatReporterMoreInfoSender,
+                        )
+                    ),
+            )
+            .also { store ->
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    store.menuEffects.collect { collectedEffects.add(it) }
+                }
+            }
 
     private fun createBrowserStore(
         middlewares: List<Middleware<BrowserState, BrowserAction>> = emptyList()

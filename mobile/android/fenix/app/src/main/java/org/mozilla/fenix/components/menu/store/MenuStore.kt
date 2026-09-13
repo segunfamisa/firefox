@@ -5,6 +5,9 @@
 package org.mozilla.fenix.components.menu.store
 
 import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.Store
 
@@ -18,8 +21,22 @@ class MenuStore(
         reducer = ::reducer,
         middleware = middleware,
     ) {
+
+    private val _menuEffects = MutableSharedFlow<MenuEffect>(extraBufferCapacity = MENU_EFFECTS_BUFFER_CAPACITY)
+
+    /** [SharedFlow] of one-shot [MenuEffect]s emitted by middlewares for the menu UI to consume. */
+    val menuEffects: SharedFlow<MenuEffect>
+        get() = _menuEffects.asSharedFlow()
+
     init {
         dispatch(MenuAction.InitAction)
+    }
+
+    /** Emit a one-shot [MenuEffect] to be consumed by the menu UI. */
+    internal fun emitEffect(effect: MenuEffect) = _menuEffects.tryEmit(effect)
+
+    private companion object {
+        const val MENU_EFFECTS_BUFFER_CAPACITY = 8
     }
 }
 
