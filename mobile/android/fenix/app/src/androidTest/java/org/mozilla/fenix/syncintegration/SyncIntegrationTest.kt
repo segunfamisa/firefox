@@ -43,7 +43,7 @@ class SyncIntegrationTest {
         tapReturnToPreviousApp()
         // Let's wait until homescreen is shown to go to three dot menu
         TestAssetHelper.waitingTime
-        TestHelper.mDevice.waitNotNull(Until.findObjects(By.res("org.mozilla.fenix.debug:id/counter_root")))
+        TestHelper.mDevice.waitNotNull(Until.findObjects(By.res("${TestHelper.packageName}:id/counter_root")))
         homeScreen(composeTestRule) {}.openThreeDotMenu {}.clickHistoryButton {}
         historyAfterSyncIsShown()
     }
@@ -165,7 +165,7 @@ class SyncIntegrationTest {
         // Wait until the Settings shows the account synced
         TestHelper.mDevice.waitNotNull(Until.findObjects(By.text("Account")), TestAssetHelper.waitingTime)
         TestHelper.mDevice.waitNotNull(
-            Until.findObjects(By.res("org.mozilla.fenix.debug:id/email")),
+            Until.findObjects(By.res("${TestHelper.packageName}:id/email")),
             TestAssetHelper.waitingTime,
         )
         TestAssetHelper.waitingTime
