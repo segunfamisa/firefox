@@ -122,6 +122,7 @@ class HomeActivityTestRule(
 
     override fun beforeActivityLaunched() {
         super.beforeActivityLaunched()
+        configureRequestInterceptorForTests()
         setLongTapTimeout(3000)
         Log.i(TAG, "beforeActivityLaunched: Trying to apply the feature flags updates")
         applyFlagUpdates()
@@ -289,6 +290,7 @@ internal constructor(
 
     override fun beforeActivityLaunched() {
         super.beforeActivityLaunched()
+        configureRequestInterceptorForTests()
         setLongTapTimeout(3000)
         Log.i(TAG, "beforeActivityLaunched: Trying to apply the feature flag updates")
         applyFlagUpdates()

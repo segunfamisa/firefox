@@ -30,11 +30,17 @@ class AppRequestInterceptor(
 
     private var navController: WeakReference<NavController>? = null
 
+    /** Interceptors consulted before the app's own. Empty in production; see bug 1987619. */
+    @VisibleForTesting internal var additionalInterceptors: List<RequestInterceptor> = emptyList()
+
+    /** Backs [interceptsAppInitiatedRequests]. Always true in production; see bug 1987619. */
+    @VisibleForTesting internal var interceptAppInitiatedRequests: Boolean = true
+
     fun setNavigationController(navController: NavController) {
         this.navController = WeakReference(navController)
     }
 
-    override fun interceptsAppInitiatedRequests() = true
+    override fun interceptsAppInitiatedRequests() = interceptAppInitiatedRequests
 
     override fun onLoadRequest(
         engineSession: EngineSession,
@@ -56,10 +62,11 @@ class AppRequestInterceptor(
         }
 
         val services = context.components.services
-        return listOf(
-                services.appLinksInterceptor,
-                services.storyUTMRequestInterceptor,
-            )
+        return (additionalInterceptors +
+                listOf(
+                    services.appLinksInterceptor,
+                    services.storyUTMRequestInterceptor,
+                ))
             .firstNotNullOfOrNull {
                 it.onLoadRequest(
                     engineSession,
