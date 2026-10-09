@@ -361,6 +361,11 @@ open class FxaAccountManager(
         service: String = "",
     ): String? =
         withContext(coroutineContext) {
+            // When sync is decoupled from accounts, we do not want to send scopes to fxa-client
+            // This will enable FxA (together with other conditions) to resolve the required scopes for the [service]
+            // being authenticated to
+            // See https://bugzilla.mozilla.org/show_bug.cgi?id=2066516#c4
+            val authScopes = authScopes.takeIf { syncConfig?.syncDecouplingEnabled != true }.orEmpty()
             val event =
                 if (pairingUrl != null) {
                     Event.Account.BeginPairingFlow(pairingUrl, service, entrypoint, authScopes)
