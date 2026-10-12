@@ -24,6 +24,7 @@ public class PictureInPictureController {
   public static class SessionPictureInPicture {
     private static final String REQUEST_EVENT = "GeckoView:PictureInPicture:Request";
     private static final String LAUNCH_EVENT = "GeckoView:PictureInPicture:Launch";
+    private static final String CLOSE_EVENT = "GeckoView:PictureInPicture:Close";
 
     private final GeckoSession mSession;
     private final Handler mHandler;
@@ -66,6 +67,14 @@ public class PictureInPictureController {
       @UiThread
       default void onEnterPictureInPicture(
           final @NonNull GeckoSession session, final @NonNull String placementToken) {}
+
+      /**
+       * Called when the picture-in-picture window created for {@code session} should be closed.
+       *
+       * @param session The session the picture-in-picture window was created for.
+       */
+      @UiThread
+      default void onExitPictureInPicture(final @NonNull GeckoSession session) {}
     }
 
     /* package */ static class Handler extends GeckoSessionHandler<Delegate> {
@@ -73,7 +82,7 @@ public class PictureInPictureController {
       private final GeckoSession mSession;
 
       private Handler(final GeckoSession session) {
-        super("GeckoViewPictureInPicture", session, new String[] {LAUNCH_EVENT});
+        super("GeckoViewPictureInPicture", session, new String[] {LAUNCH_EVENT, CLOSE_EVENT});
         mSession = session;
       }
 
@@ -85,6 +94,8 @@ public class PictureInPictureController {
           final EventCallback callback) {
         if (LAUNCH_EVENT.equals(event)) {
           delegate.onEnterPictureInPicture(mSession, message.getString("placementToken", ""));
+        } else if (CLOSE_EVENT.equals(event)) {
+          delegate.onExitPictureInPicture(mSession);
         }
       }
     }
