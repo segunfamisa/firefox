@@ -42,6 +42,19 @@ public final class PipSessionHolder {
   }
 
   /**
+   * Closes the window if it is showing a video from {@code session}, which is going away, and stops
+   * keeping {@code session} active for it.
+   */
+  @OptIn(markerClass = ExperimentalGeckoViewApi.class)
+  public static void closeWindowFor(@NonNull final GeckoSession session) {
+    final PictureInPictureActivity window = getActiveActivity();
+    if (window != null && window.isShowingSource(session)) {
+      window.closeForGecko();
+    }
+    session.getSessionPictureInPicture().setKeepActive(false);
+  }
+
+  /**
    * Stops keeping {@code session} active for the window, and deactivates it unless the browser is
    * showing it.
    */
