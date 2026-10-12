@@ -788,6 +788,29 @@ function startup() {
         resource: "resource://gre/modules/GeckoViewPageExtractor.sys.mjs",
       },
     },
+    {
+      name: "GeckoViewPictureInPicture",
+      onInit: {
+        actors: {
+          // The session hosting the cloned video. It registers no events of its
+          // own, because the player reuses toolkit's PictureInPictureChild, which
+          // listens to the source video itself.
+          GeckoViewPictureInPicturePlayer: {
+            parent: {
+              esModuleURI:
+                "resource:///actors/GeckoViewPictureInPicturePlayerParent.sys.mjs",
+            },
+            child: {
+              esModuleURI:
+                "resource:///actors/GeckoViewPictureInPicturePlayerChild.sys.mjs",
+            },
+            allFrames: true,
+            messageManagerGroups: ["browsers"],
+            safeForUntrustedWebProcess: true,
+          },
+        },
+      },
+    },
   ]);
 
   // Allows actors to access ModuleManager.
