@@ -282,7 +282,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
             return None
         return cargo
 
-    # A whitelist of acceptable license identifiers for the
+    # An allowlist of acceptable license identifiers for the
     # packages.license field from https://spdx.org/licenses/.  Cargo
     # documentation claims that values are checked against the above
     # list and that multiple entries can be separated by '/'.  We
@@ -290,21 +290,21 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
     # completeness and because some entries below obviously do not
     # conform to the format prescribed in the documentation.
     #
-    # It is insufficient to have additions to this whitelist reviewed
+    # It is insufficient to have additions to this allowlist reviewed
     # solely by a build peer; any additions must be checked by somebody
     # competent to review licensing minutiae.
 
     # Licenses for code used at runtime. Please see the above comment before
     # adding anything to this list.
-    RUNTIME_LICENSE_WHITELIST = [
+    RUNTIME_LICENSE_ALLOWLIST = [
         "0BSD",
         "Apache-2.0",
         "Apache-2.0 WITH LLVM-exception",
         # BSD-2-Clause and BSD-3-Clause are ok, but packages using them
         # must be added to the appropriate section of about:licenses.
-        # To encourage people to remember to do that, we do not whitelist
+        # To encourage people to remember to do that, we do not allowlist
         # the licenses themselves, and we require the packages to be added
-        # to RUNTIME_LICENSE_PACKAGE_WHITELIST below.
+        # to RUNTIME_LICENSE_PACKAGE_ALLOWLIST below.
         "CC0-1.0",
         "ISC",
         "MIT",
@@ -317,7 +317,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
 
     # Licenses for code used at build time (e.g. code generators). Please see the above
     # comments before adding anything to this list.
-    BUILDTIME_LICENSE_WHITELIST = {
+    BUILDTIME_LICENSE_ALLOWLIST = {
         "BSD-3-Clause": [
             "bindgen",
             "fuchsia-zircon",
@@ -328,9 +328,9 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         ]
     }
 
-    # This whitelist should only be used for packages that use an acceptable
+    # This allowlist should only be used for packages that use an acceptable
     # license, but that also need to explicitly mentioned in about:license.
-    RUNTIME_LICENSE_PACKAGE_WHITELIST = {
+    RUNTIME_LICENSE_PACKAGE_ALLOWLIST = {
         "BSD-2-Clause": [
             "arrayref",
             "mach",
@@ -354,18 +354,18 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         "853f87c96f3d249f200fec6db1114427bc8bdf4afddc93c576956d78152ce978"
     )
 
-    # This whitelist should only be used for packages that use a
+    # This allowlist should only be used for packages that use a
     # license-file and for which the license-file entry has been
     # reviewed.  The table is keyed by package names and maps to the
     # sha256 hash of the license file that we reviewed.
     #
-    # As above, it is insufficient to have additions to this whitelist
+    # As above, it is insufficient to have additions to this allowlist
     # reviewed solely by a build peer; any additions must be checked by
     # somebody competent to review licensing minutiae.
-    RUNTIME_LICENSE_FILE_PACKAGE_WHITELIST = {
+    RUNTIME_LICENSE_FILE_PACKAGE_ALLOWLIST = {
         # MIT
         "deque": "6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb",
-        # we're whitelisting this fuchsia crate because it doesn't get built in the final
+        # we're allowlisting this fuchsia crate because it doesn't get built in the final
         # product but has a license-file that needs ignoring
         "fuchsia-cprng": "03b114f53e6587a398931762ee11e2395bfdba252a329940e2c8c9e81813845b",
         # ICU4X uses Unicode v3 license
@@ -399,7 +399,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         https://doc.rust-lang.org/cargo/reference/manifest.html
 
         This is an SPDX 2.1 license expression for this package.  Currently
-        crates.io will validate the license provided against a whitelist of
+        crates.io will validate the license provided against an allowlist of
         known license and exception identifiers from the SPDX license list
         2.4.  Parentheses are not currently supported.
 
@@ -430,9 +430,9 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
 
         license_list = re.split(r"\s*/\s*|\s+OR\s+", license_string)
         for license in license_list:
-            if license in VendorRust.RUNTIME_LICENSE_WHITELIST:
+            if license in VendorRust.RUNTIME_LICENSE_ALLOWLIST:
                 return True
-            if package in VendorRust.RUNTIME_LICENSE_PACKAGE_WHITELIST.get(license, []):
+            if package in VendorRust.RUNTIME_LICENSE_PACKAGE_ALLOWLIST.get(license, []):
                 return True
         return False
 
@@ -441,7 +441,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
             self.log(logging.DEBUG, "package_license", {}, f"has license {license}")
 
             if not self.runtime_license(package, license):
-                if license not in self.BUILDTIME_LICENSE_WHITELIST:
+                if license not in self.BUILDTIME_LICENSE_ALLOWLIST:
                     self.log(
                         logging.ERROR,
                         "package_license_error",
@@ -449,22 +449,22 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
                         f"""Package {package} has a non-approved license: {license}.
 
     Please request license review on the package's license.  If the package's license
-    is approved, please add it to the whitelist of suitable licenses.
+    is approved, please add it to the allowlist of suitable licenses.
     """,
                     )
                     return False
-                elif package not in self.BUILDTIME_LICENSE_WHITELIST[license]:
+                elif package not in self.BUILDTIME_LICENSE_ALLOWLIST[license]:
                     self.log(
                         logging.ERROR,
                         "package_license_error",
                         {},
                         f"""Package {package} has a license that is approved for build-time dependencies:
     {license}
-    but the package itself is not whitelisted as being a build-time only package.
+    but the package itself is not allowlisted as being a build-time only package.
 
-    If your package is build-time only, please add it to the whitelist of build-time
+    If your package is build-time only, please add it to the allowlist of build-time
     only packages. Otherwise, you need to request license review on the package's license.
-    If the package's license is approved, please add it to the whitelist of suitable licenses.
+    If the package's license is approved, please add it to the allowlist of suitable licenses.
     """,
                     )
                     return False
@@ -539,7 +539,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
                 f"package has license-file {license_file}",
             )
 
-            if package_name not in self.RUNTIME_LICENSE_FILE_PACKAGE_WHITELIST:
+            if package_name not in self.RUNTIME_LICENSE_FILE_PACKAGE_ALLOWLIST:
                 self.log(
                     logging.ERROR,
                     "package_license_file_unknown",
@@ -547,12 +547,12 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
                     f"""Package {package_name} has an unreviewed license file: {license_file}.
 
 Please request review on the provided license; if approved, the package can be added
-to the whitelist of packages whose licenses are suitable.
+to the allowlist of packages whose licenses are suitable.
 """,
                 )
                 return False
 
-            approved_hash = self.RUNTIME_LICENSE_FILE_PACKAGE_WHITELIST[package_name]
+            approved_hash = self.RUNTIME_LICENSE_FILE_PACKAGE_ALLOWLIST[package_name]
 
             with open(
                 os.path.join(vendor_dir, package_name, license_file), "rb"
