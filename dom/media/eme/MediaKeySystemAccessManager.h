@@ -223,6 +223,9 @@ class MediaKeySystemAccessManager final : public nsIObserver, public nsINamed {
   // request once the CDM is installed or a timeout is reached.
   void RequestMediaKeySystemAccess(UniquePtr<PendingRequest> aRequest);
 
+  void OnKeySystemStatus(UniquePtr<PendingRequest> aRequest,
+                         MediaKeySystemAccess::KeySystemStatus aStatus);
+
   // Approves aRequest and provides MediaKeySystemAccess by resolving the
   // promise associated with the request.
   void ProvideAccess(UniquePtr<PendingRequest> aRequest);
@@ -243,6 +246,7 @@ class MediaKeySystemAccessManager final : public nsIObserver, public nsINamed {
 
   nsCOMPtr<nsPIDOMWindowInner> mWindow;
   bool mAddedObservers = false;
+  bool mShuttingDown = false;
 
   // Has the app approved protected media playback? If it has we cache the
   // value so we don't need to check again.
