@@ -289,7 +289,7 @@ nsresult UnboxData(jni::String::Param aEvent, JSContext* aCx,
 }
 
 class JavaCallbackDelegate final : public nsIGeckoViewEventCallback {
-  const java::EventCallback::GlobalRef mCallback;
+  java::EventCallback::GlobalRef mCallback;
 
   virtual ~JavaCallbackDelegate() {}
 
@@ -298,14 +298,20 @@ class JavaCallbackDelegate final : public nsIGeckoViewEventCallback {
                       const) {
     MOZ_ASSERT(NS_IsMainThread());
 
+    if (!mCallback) {
+      return NS_OK;
+    }
+
     jni::Object::LocalRef data(jni::GetGeckoThreadEnv());
     nsresult rv = BoxData(u"callback"_ns, aCx, aData, data,
                           /* ObjectOnly */ false);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    auto callback = std::move(mCallback);
+
     dom::AutoNoJSAPI nojsapi;
 
-    (java::EventCallback(*mCallback).*aCall)(data);
+    (java::EventCallback(*callback).*aCall)(data);
     return NS_OK;
   }
 
