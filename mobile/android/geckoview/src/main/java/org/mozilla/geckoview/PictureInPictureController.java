@@ -23,6 +23,7 @@ public class PictureInPictureController {
    */
   public static class SessionPictureInPicture {
     private static final String REQUEST_EVENT = "GeckoView:PictureInPicture:Request";
+    private static final String EXIT_EVENT = "GeckoView:PictureInPicture:Exit";
     private static final String LAUNCH_EVENT = "GeckoView:PictureInPicture:Launch";
     private static final String CLOSE_EVENT = "GeckoView:PictureInPicture:Close";
 
@@ -50,6 +51,19 @@ public class PictureInPictureController {
     public @NonNull GeckoResult<Void> request() {
       ThreadUtils.assertOnHandlerThread();
       return mSession.getEventDispatcher().queryVoid(REQUEST_EVENT);
+    }
+
+    /**
+     * Notifies Gecko that the picture-in-picture window showing a video from this session has been
+     * closed by the application. Must be called when the application tears the window down itself,
+     * so that state held for the video can be released.
+     *
+     * @return A GeckoResult that completes once that state has been released.
+     */
+    @UiThread
+    public @NonNull GeckoResult<Void> exit() {
+      ThreadUtils.assertOnUiThread();
+      return mSession.getEventDispatcher().queryVoid(EXIT_EVENT);
     }
 
     /** Delegate for opening and closing picture-in-picture windows on Gecko's behalf. */
