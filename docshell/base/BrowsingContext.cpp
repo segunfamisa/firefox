@@ -3453,7 +3453,8 @@ void BrowsingContext::DidSet(FieldIndex<IDX_ForceDesktopViewport>,
   PresContextAffectingFieldChanged();
   if (nsIDocShell* shell = GetDocShell()) {
     if (RefPtr ps = shell->GetPresShell()) {
-      ps->MaybeRecreateMobileViewportManager(/* aAfterInitialization= */ true);
+      ps->MaybeRecreateMobileViewportManager(
+          PresShell::MobileViewportManagerUpdate::ManagerTypeMayChange);
     }
   }
 }
