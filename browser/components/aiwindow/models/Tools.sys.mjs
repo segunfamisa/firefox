@@ -1089,6 +1089,13 @@ export class GetPageContent {
   static MAX_CHARACTERS = 10000;
 
   /**
+   * Generous until telemetry shows real transcript lengths. 2^16
+   * because `text_length` is rounded down to a power of two, so its 65536
+   * bucket counts exactly the truncated transcripts.
+   */
+  static MAX_TRANSCRIPT_CHARACTERS = 65536;
+
+  /**
    * getPageContent's results as plain text. A failed read contributes the
    * sentence explaining it, so callers that must tell the two apart want
    * getPageContent itself.
@@ -1410,6 +1417,7 @@ export class GetPageContent {
       pageExtractor.getText(
         {
           sufficientLength: GetPageContent.MAX_CHARACTERS,
+          sufficientTranscriptLength: GetPageContent.MAX_TRANSCRIPT_CHARACTERS,
           cleanWhitespace: true,
           removeBoilerplate: true,
           sourceUrl,
