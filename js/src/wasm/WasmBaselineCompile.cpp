@@ -6668,7 +6668,7 @@ void BaseCompiler::emitCompareI64(Assembler::Condition compareOp,
   RegI64 rs0, rs1;
   pop2xI64(&rs0, &rs1);
   RegI32 rd(fromI64(rs0));
-  cmp64Set(compareOp, rs0, rs1, rd);
+  masm.cmp64Set(compareOp, rs0, rs1, rd);
   freeI64(rs1);
   freeI64Except(rs0, rd);
   pushI32(rd);

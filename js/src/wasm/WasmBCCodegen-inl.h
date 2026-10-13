@@ -235,23 +235,6 @@ FaultingCodeRange BaseCompiler::trap(Trap t, const TrapSiteDesc& trapSite,
   return fcr;
 }
 
-void BaseCompiler::cmp64Set(Assembler::Condition cond, RegI64 lhs, RegI64 rhs,
-                            RegI32 dest) {
-#if defined(JS_PUNBOX64)
-  masm.cmpPtrSet(cond, lhs.reg, rhs.reg, dest);
-#else
-  // TODO / OPTIMIZE (Bug 1316822): This is pretty branchy, we should be
-  // able to do better.
-  Label done, condTrue;
-  masm.branch64(cond, lhs, rhs, &condTrue);
-  moveImm32(0, dest);
-  masm.jump(&done);
-  masm.bind(&condTrue);
-  moveImm32(1, dest);
-  masm.bind(&done);
-#endif
-}
-
 [[nodiscard]] bool BaseCompiler::supportsRoundInstruction(RoundingMode mode) {
   return Assembler::HasRoundInstruction(mode);
 }

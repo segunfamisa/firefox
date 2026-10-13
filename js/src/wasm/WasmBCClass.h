@@ -1152,10 +1152,6 @@ struct BaseCompiler final {
   // Emit a table switch, `theTable` is the jump table.
   void tableSwitch(Label* theTable, RegI32 switchValue, Label* dispatchCode);
 
-  // Compare i64 and set an i32 boolean result according to the condition.
-  inline void cmp64Set(Assembler::Condition cond, RegI64 lhs, RegI64 rhs,
-                       RegI32 dest);
-
   // Round floating to integer.
   [[nodiscard]] inline bool supportsRoundInstruction(RoundingMode mode);
   inline void roundF32(RoundingMode roundingMode, RegF32 f0);
