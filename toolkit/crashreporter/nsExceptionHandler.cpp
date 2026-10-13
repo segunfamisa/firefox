@@ -2644,28 +2644,6 @@ nsresult AppendAppNotesToCrashReport(const nsACString& data) {
   return NS_OK;
 }
 
-nsresult RegisterAppMemory(void* ptr, size_t length) {
-  if (!GetEnabled()) return NS_ERROR_NOT_INITIALIZED;
-
-#if defined(XP_LINUX) || defined(XP_WIN)
-  gExceptionHandler->RegisterAppMemory(ptr, length);
-  return NS_OK;
-#else
-  return NS_ERROR_NOT_IMPLEMENTED;
-#endif
-}
-
-nsresult UnregisterAppMemory(void* ptr) {
-  if (!GetEnabled()) return NS_ERROR_NOT_INITIALIZED;
-
-#if defined(XP_LINUX) || defined(XP_WIN)
-  gExceptionHandler->UnregisterAppMemory(ptr);
-  return NS_OK;
-#else
-  return NS_ERROR_NOT_IMPLEMENTED;
-#endif
-}
-
 void SetIncludeContextHeap(bool aValue) {
   sIncludeContextHeap = aValue;
 
