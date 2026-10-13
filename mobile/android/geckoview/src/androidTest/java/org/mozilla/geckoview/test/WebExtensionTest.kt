@@ -25,6 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Assume.assumeThat
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.AllowOrDeny
@@ -4745,6 +4746,7 @@ class WebExtensionTest : BaseSessionTest() {
         )
     }
 
+    @Ignore("https://bugzilla.mozilla.org/show_bug.cgi?id=2080467")
     @Test
     fun testExtensionProcessCrash() {
         sessionRule.setPrefsUntilTestEnd(
