@@ -7,3 +7,4 @@ defaults pref(gfx.webrender.blob.largeish-px,0) pref(gfx.webrender.blob.relaxed-
 
 test-pref(gfx.webrender.svg-shapes.ellipses,true) ref-pref(gfx.webrender.svg-shapes.ellipses,false) fuzzy(0-80,0-2200) == shapes-ellipses.svg shapes-ellipses.svg
 test-pref(gfx.webrender.svg-shapes.strokes,true) ref-pref(gfx.webrender.svg-shapes.strokes,false) test-pref(gfx.webrender.svg-shapes.ellipses,true) ref-pref(gfx.webrender.svg-shapes.ellipses,false) fuzzy(0-110,0-13377) == shapes-strokes.svg shapes-strokes.svg
+test-pref(gfx.webrender.svg-text,true) ref-pref(gfx.webrender.svg-text,false) fuzzy(0-255,0-11865) == text-simple.svg text-simple.svg
