@@ -17358,12 +17358,11 @@ bool CodeGenerator::generateWasm(wasm::CallIndirectId callIndirectId,
 
       auto* ool = new (alloc()) LambdaOutOfLineCode(
           [this, stackMaps, functionEntryStackMap](OutOfLineCode& ool) {
-            masm.wasmTrap(wasm::Trap::CheckInterrupt, wasm::TrapSiteDesc());
-            CodeOffset trapInsnOffset = CodeOffset(masm.currentOffset());
+            FaultingCodeRange fcr =
+                masm.wasmTrap(wasm::Trap::CheckInterrupt, wasm::TrapSiteDesc());
 
-            if (functionEntryStackMap &&
-                !stackMaps->add(trapInsnOffset.offset(),
-                                functionEntryStackMap)) {
+            if (functionEntryStackMap && fcr.isValid() &&
+                !stackMaps->add(fcr.resumeOffset(), functionEntryStackMap)) {
               masm.setOOM();
             }
             masm.jump(ool.rejoin());
@@ -21535,9 +21534,12 @@ void CodeGenerator::visitWasmHeapReg(LWasmHeapReg* ins) {
 void CodeGenerator::emitResumableWasmTrapOOL(
     LInstruction* lir, size_t framePushed,
     const wasm::TrapSiteDesc& trapSiteDesc, wasm::Trap trap) {
-  masm.wasmTrap(trap, trapSiteDesc);
+  FaultingCodeRange fcr = masm.wasmTrap(trap, trapSiteDesc);
+  if (!fcr.isValid()) {
+    return;
+  }
 
-  markSafepointAt(masm.currentOffset(), lir);
+  markSafepointAt(fcr.resumeOffset(), lir);
 
   // Note that masm.framePushed() doesn't include the register dump area.
   // That will be taken into account when the StackMap is created from the

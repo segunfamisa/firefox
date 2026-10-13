@@ -292,10 +292,16 @@ bool BaseCompiler::addInterruptCheck() {
   masm.branch32(Assembler::Equal,
                 Address(tmp, wasm::Instance::offsetOfInterrupt()), Imm32(0),
                 &ok);
-  trap(wasm::Trap::CheckInterrupt);
+  FaultingCodeRange fcr = trap(wasm::Trap::CheckInterrupt);
   masm.bind(&ok);
+
+  if (!fcr.isValid()) {
+    return false;
+  }
+
   // stackmap for: interrupt check
-  return createStackMap(Some(wasm::Trap::CheckInterrupt));
+  return createStackMap(Some(wasm::Trap::CheckInterrupt),
+                        CodeOffset(fcr.resumeOffset()));
 }
 
 void BaseCompiler::checkDivideByZero(RegI32 rhs) {

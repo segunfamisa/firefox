@@ -1400,10 +1400,11 @@ struct BaseCompiler final {
   inline TrapSiteDesc trapSiteDesc() const;
 
   // Generate a trap instruction for the current bytecodeOffset.
-  inline void trap(Trap t);
+  inline FaultingCodeRange trap(Trap t);
 
   // Generate a trap instruction for given location and stack map.
-  inline void trap(Trap t, const TrapSiteDesc& trapSite, StackMap* stackMap);
+  inline FaultingCodeRange trap(Trap t, const TrapSiteDesc& trapSite,
+                                StackMap* stackMap);
 
   // Abstracted helper for throwing, used for throw, rethrow, and rethrowing
   // at the end of a series of catch blocks (if none matched the exception).

@@ -6935,16 +6935,16 @@ CodeOffset MacroAssembler::wasmTrapOnFailedInstanceCall(
                 &noTrap);
       break;
   }
-  wasmTrap(failureTrap, trapSiteDesc);
+  FaultingCodeRange fcr = wasmTrap(failureTrap, trapSiteDesc);
   bind(&noTrap);
 
-  if (failureTrap != wasm::Trap::ThrowReported) {
+  if (failureTrap != wasm::Trap::ThrowReported || !fcr.isValid()) {
     return CodeOffset();
   }
 
   // For Trap::ThrowReported, the caller(s) may want to create a stackmap, so
   // tell them what its key must be.
-  return CodeOffset(currentOffset());
+  return CodeOffset(fcr.resumeOffset());
 }
 
 // In principle, call_indirect requires an expensive context switch to the
