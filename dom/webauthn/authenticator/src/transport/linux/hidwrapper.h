@@ -1,3 +1,10 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
+#ifndef DOM_WEBAUTHN_AUTHENTICATOR_SRC_TRANSPORT_LINUX_HIDWRAPPER_H_
+#define DOM_WEBAUTHN_AUTHENTICATOR_SRC_TRANSPORT_LINUX_HIDWRAPPER_H_
+
 #include<sys/ioctl.h>
 #include<linux/hidraw.h>
 
@@ -10,3 +17,5 @@ const __u32 _HIDIOCGRDESCSIZE = HIDIOCGRDESCSIZE;
 
 const __u32 _HIDIOCGRDESC = HIDIOCGRDESC;
 #undef HIDIOCGRDESC
+
+#endif  // DOM_WEBAUTHN_AUTHENTICATOR_SRC_TRANSPORT_LINUX_HIDWRAPPER_H_
