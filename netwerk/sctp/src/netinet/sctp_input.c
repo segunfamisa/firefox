@@ -57,6 +57,9 @@
 #if defined(__FreeBSD__) && !defined(__Userspace__)
 #include <sys/smp.h>
 #endif
+#if defined(_WIN32) && defined(__MINGW32__)
+#include <minmax.h>
+#endif
 
 static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
@@ -255,8 +258,6 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb)
 	struct sctp_init *init;
 	struct sctp_association *asoc;
 	struct sctp_nets *lnet;
-	struct sctp_stream_reset_list *strrst, *nstrrst;
-	struct sctp_queued_to_read *sq, *nsq;
 	unsigned int i;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -357,27 +358,6 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb)
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 	/* open the requested streams */
 
-	/*
-	 * Flush inbound stream state carrying stream ids validated against the
-	 * old streamincnt before strmin is reallocated below; otherwise a later
-	 * drain of pending_reply_queue could index the new (smaller) strmin out
-	 * of bounds.
-	 */
-	TAILQ_FOREACH_SAFE(strrst, &asoc->resetHead, next_resp, nstrrst) {
-		TAILQ_REMOVE(&asoc->resetHead, strrst, next_resp);
-		SCTP_FREE(strrst, SCTP_M_STRESET);
-	}
-	TAILQ_FOREACH_SAFE(sq, &asoc->pending_reply_queue, next, nsq) {
-		TAILQ_REMOVE(&asoc->pending_reply_queue, sq, next);
-		if (sq->data) {
-			sctp_m_freem(sq->data);
-			sq->data = NULL;
-		}
-		sctp_free_remote_addr(sq->whoFrom);
-		sq->whoFrom = NULL;
-		sq->stcb = NULL;
-		sctp_free_a_readq(stcb, sq);
-	}
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
 		for (i = 0; i < asoc->streamincnt; i++) {
@@ -1495,6 +1475,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	struct sctp_asconf_addr *aparam, *naparam;
 	struct sctp_asconf_ack *aack, *naack;
 	struct sctp_tmit_chunk *chk, *nchk;
+	struct sctp_stream_reset_list *strrst, *nstrrst;
+	struct sctp_queued_to_read *sq, *nsq;
 	struct sctp_nets *net;
 	struct mbuf *op_err;
 	int init_offset, initack_offset, i;
@@ -2007,10 +1989,21 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			stcb->asoc.strmout[i].sid = i;
 			stcb->asoc.strmout[i].last_msg_incomplete = 0;
 		}
-		/*
-		 * resetHead and pending_reply_queue are flushed by
-		 * sctp_process_init() below, where strmin is reallocated.
-		 */
+		TAILQ_FOREACH_SAFE(strrst, &asoc->resetHead, next_resp, nstrrst) {
+			TAILQ_REMOVE(&asoc->resetHead, strrst, next_resp);
+			SCTP_FREE(strrst, SCTP_M_STRESET);
+		}
+		TAILQ_FOREACH_SAFE(sq, &asoc->pending_reply_queue, next, nsq) {
+			TAILQ_REMOVE(&asoc->pending_reply_queue, sq, next);
+			if (sq->data) {
+				sctp_m_freem(sq->data);
+				sq->data = NULL;
+			}
+			sctp_free_remote_addr(sq->whoFrom);
+			sq->whoFrom = NULL;
+			sq->stcb = NULL;
+			sctp_free_a_readq(stcb, sq);
+		}
 		TAILQ_FOREACH_SAFE(chk, &asoc->control_send_queue, sctp_next, nchk) {
 			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);
 			if (chk->data) {
@@ -6352,7 +6345,11 @@ sctp_input_with_port(struct mbuf *i_pak, int off, uint16_t port)
 	}
 	ecn_bits = ip->ip_tos;
 #if defined(__FreeBSD__) && !defined(__Userspace__)
-	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
+	if (m->m_pkthdr.csum_flags & (CSUM_SCTP_VALID | CSUM_IP_SCTP)) {
+		/*
+		 * Packet with CSUM_IP_SCTP were sent from local host using
+		 * checksum offloading. Checksum not required.
+		 */
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		compute_crc = 0;
 	} else {
