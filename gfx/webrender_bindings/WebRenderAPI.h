@@ -692,15 +692,12 @@ class DisplayListBuilder final {
                           const wr::LayoutSize aTileSpacing,
                           bool aForceAntiAliasing = false);
 
-  void PushRadialGradient(const wr::LayoutRect& aBounds,
-                          const wr::LayoutRect& aClip, bool aIsBackfaceVisible,
-                          const wr::LayoutVector2D& aCenter,
-                          const wr::LayoutSize& aRadius,
-                          const nsTArray<wr::GradientStop>& aStops,
-                          wr::ExtendMode aExtendMode,
-                          const wr::LayoutSize aTileSize,
-                          const wr::LayoutSize aTileSpacing,
-                          bool aForceAntiAliasing = false);
+  void PushRadialGradient(
+      const wr::LayoutRect& aBounds, const wr::LayoutRect& aClip,
+      bool aIsBackfaceVisible, const wr::LayoutVector2D& aCenter,
+      const wr::LayoutSize& aRadius, const nsTArray<wr::GradientStop>& aStops,
+      wr::ExtendMode aExtendMode, const wr::LayoutSize aTileSize,
+      const wr::LayoutSize aTileSpacing, bool aForceAntiAliasing = false);
 
   void PushConicGradient(const wr::LayoutRect& aBounds,
                          const wr::LayoutRect& aClip, bool aIsBackfaceVisible,

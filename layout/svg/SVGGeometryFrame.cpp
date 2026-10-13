@@ -889,10 +889,10 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
     wr::LayoutSize tileSize{wrRect.width(), wrRect.height()};
     wr::LayoutSize tileSpacing{0.0f, 0.0f};
     if (aG.mIsLinear) {
-      aBuilder.PushLinearGradient(wrRect, wrRect, backfaceVisible,
-                                  toItemVector(aG.mStart), toItemVector(aG.mEnd),
-                                  aG.mStops, aG.mExtendMode, tileSize,
-                                  tileSpacing, antialias);
+      aBuilder.PushLinearGradient(
+          wrRect, wrRect, backfaceVisible, toItemVector(aG.mStart),
+          toItemVector(aG.mEnd), aG.mStops, aG.mExtendMode, tileSize,
+          tileSpacing, antialias);
     } else {
       aBuilder.PushRadialGradient(
           wrRect, wrRect, backfaceVisible, toItemVector(aG.mCenter),
