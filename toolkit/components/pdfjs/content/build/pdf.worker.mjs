@@ -20,8 +20,8 @@
  */
 
 /**
- * pdfjsVersion = 6.5.98
- * pdfjsBuild = e0b4f473c
+ * pdfjsVersion = 6.5.128
+ * pdfjsBuild = e1412d3a5
  */
 
 ;// ./src/shared/util.js
@@ -9676,7 +9676,7 @@ async function JBig2(moduleArg = {}) {
 
 
 class WasmImage {
-  static #handler = null;
+  static #getHandler = null;
   static #instances = new Set();
   static #useWasm = true;
   static #useWorkerFetch = true;
@@ -9686,7 +9686,7 @@ class WasmImage {
   _filename = null;
   _noWasmFilename = null;
   static setOptions({
-    handler,
+    getHandler,
     useWasm,
     useWorkerFetch,
     wasmUrl
@@ -9695,7 +9695,7 @@ class WasmImage {
     WasmImage.#useWorkerFetch = useWorkerFetch;
     WasmImage.#wasmUrl = wasmUrl;
     if (!useWorkerFetch) {
-      WasmImage.#handler = handler;
+      WasmImage.#getHandler = getHandler;
     }
   }
   static get instance() {
@@ -39956,6 +39956,12 @@ class StructTreeRoot {
           if (objRef) {
             const tagDict = xref.fetch(objRef).clone();
             StructTreeRoot.#writeProperties(tagDict, accessibilityData);
+            if (!accessibilityData.alt) {
+              tagDict.delete("Alt");
+              if (!accessibilityData.actualText) {
+                tagDict.delete("ActualText");
+              }
+            }
             changes.put(objRef, {
               data: tagDict
             });
@@ -53698,7 +53704,7 @@ class Annotation {
     } = this.data;
     let appearance = this.appearance;
     const isUsingOwnCanvas = !!(hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY && (!this._ownCanvasRequiresForms || intent & RenderingIntentFlag.ANNOTATIONS_FORMS));
-    if (isUsingOwnCanvas && (this.width === 0 || this.height === 0)) {
+    if (isUsingOwnCanvas && !this._hasCanvasSize) {
       this.data.hasOwnCanvas = false;
       return this._getOperatorListNoAppearance();
     }
@@ -53878,6 +53884,13 @@ class Annotation {
   }
   get height() {
     return this.data.rect[3] - this.data.rect[1];
+  }
+  get _hasCanvasSize() {
+    const {
+      width,
+      height
+    } = this;
+    return width > 0 && height > 0 && Number.isFinite(width + height);
   }
 }
 class AnnotationBorderStyle {
@@ -54264,7 +54277,7 @@ class WidgetAnnotation extends Annotation {
       return super.getOperatorList(evaluator, task, intent, annotationStorage);
     }
     const isUsingOwnCanvas = !!(this.data.hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY);
-    if (isUsingOwnCanvas && (this.width === 0 || this.height === 0)) {
+    if (isUsingOwnCanvas && !this._hasCanvasSize) {
       this.data.hasOwnCanvas = false;
       return this._getOperatorListNoAppearance();
     }
@@ -60807,6 +60820,8 @@ function parseDocBaseUrl(url) {
   return null;
 }
 class BasePdfManager {
+  static #handlers = new Set();
+  #handler = null;
   constructor({
     docBaseUrl,
     docId,
@@ -60817,8 +60832,10 @@ class BasePdfManager {
   }) {
     this._docBaseUrl = parseDocBaseUrl(docBaseUrl);
     this._docId = docId;
+    this.#handler = handler;
     this._password = password;
     this.enableXfa = enableXfa;
+    BasePdfManager.#handlers.add(handler);
     evaluatorOptions.isOffscreenCanvasSupported &&= FeatureTest.isOffscreenCanvasSupported;
     evaluatorOptions.isImageDecoderSupported &&= FeatureTest.isImageDecoderSupported;
     this.evaluatorOptions = Object.freeze(evaluatorOptions);
@@ -60827,7 +60844,7 @@ class BasePdfManager {
     OperatorList.setOptions(evaluatorOptions);
     const options = {
       ...evaluatorOptions,
-      handler
+      getHandler: () => this.#handler ?? BasePdfManager.#handlers.keys().next().value
     };
     IccColorSpace.setOptions(options);
     CmykICCBasedCS.setOptions(options);
@@ -60883,7 +60900,8 @@ class BasePdfManager {
     this.pdfDocument.xref.encrypt?.setPassword(password);
   }
   terminate(reason) {
-    unreachable("Abstract method `terminate` called");
+    BasePdfManager.#handlers.delete(this.#handler);
+    this.#handler = null;
   }
 }
 class LocalPdfManager extends BasePdfManager {
@@ -60900,7 +60918,6 @@ class LocalPdfManager extends BasePdfManager {
   requestLoadedStream(noFetch = false) {
     return this._loadedStreamPromise;
   }
-  terminate(reason) {}
 }
 class NetworkPdfManager extends BasePdfManager {
   constructor(args) {
@@ -60937,6 +60954,7 @@ class NetworkPdfManager extends BasePdfManager {
     });
   }
   terminate(reason) {
+    super.terminate(reason);
     this.streamManager.abort(reason);
   }
 }
@@ -60962,8 +60980,8 @@ function wrapReason(ex) {
   if (ex instanceof AbortException || ex instanceof InvalidPDFException || ex instanceof PasswordException || ex instanceof ResponseException || ex instanceof UnknownErrorException) {
     return ex;
   }
-  if (!(ex instanceof Error || typeof ex === "object" && ex !== null)) {
-    unreachable('wrapReason: Expected "reason" to be a (possibly cloned) Error.');
+  if (typeof ex !== "object" || ex === null) {
+    return new UnknownErrorException(String(ex), String(ex));
   }
   switch (ex.name) {
     case "AbortException":
@@ -61185,7 +61203,6 @@ class MessageHandler {
         streamSinks.delete(streamId);
       },
       error(reason) {
-        assert(reason instanceof Error, "error must have a valid reason");
         if (this.isCancelled) {
           return;
         }
@@ -64600,7 +64617,7 @@ class WorkerMessageHandler {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.5.98";
+    const workerVersion = "6.5.128";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match the Worker version "${workerVersion}".`);
     }
