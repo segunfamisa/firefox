@@ -11,15 +11,6 @@ import { MESSAGE_ROLE } from "moz-src:///browser/components/aiwindow/ui/modules/
 import { MemoriesManager } from "moz-src:///browser/components/aiwindow/models/memories/MemoriesManager.sys.mjs";
 import { sanitizeUntrustedContent } from "moz-src:///browser/components/aiwindow/models/ChatUtils.sys.mjs";
 
-export {
-  _setLoadPromptForTesting,
-  _setBuildConversationForTesting,
-  _setGetConversationsByIdForTesting,
-  _clearResumeActivityCacheForTesting,
-  generateResumeActivityConversationStarters,
-  constructConversationToResumeActivity,
-} from "moz-src:///browser/components/aiwindow/models/memories/journeys/JourneyManager.sys.mjs";
-
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   renderPrompt: "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",

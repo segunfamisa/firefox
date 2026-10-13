@@ -16,6 +16,10 @@ export const MAX_MESSAGES_PER_CONVERSATION_FOR_RESUME_ACTIVITY_PROMPT = 3;
 // This avoids re-querying additional LLM, places/chat DB calls for each suggestion request between memory generation runs.
 const _resumeActivityCache = new Map();
 
+let _savedLoadPromptDescriptor = null;
+let _savedBuildConversationDescriptor = null;
+let _savedGetConversationsByIdDescriptor = null;
+
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   openAIEngine:
@@ -573,75 +577,58 @@ export const JourneyManager = {
       locale => appLocale === locale || appLocale.startsWith(`${locale}-`)
     );
   },
+
+  _setLoadPromptForTesting(fn) {
+    if (fn !== null) {
+      _savedLoadPromptDescriptor = Object.getOwnPropertyDescriptor(
+        lazy,
+        "loadPrompt"
+      );
+      lazy.loadPrompt = fn;
+    } else if (_savedLoadPromptDescriptor) {
+      // eslint-disable-next-line mozilla/valid-lazy
+      Object.defineProperty(lazy, "loadPrompt", _savedLoadPromptDescriptor);
+      _savedLoadPromptDescriptor = null;
+    }
+  },
+
+  _setBuildConversationForTesting(fn) {
+    if (fn !== null) {
+      _savedBuildConversationDescriptor = Object.getOwnPropertyDescriptor(
+        lazy,
+        "buildConversation"
+      );
+      lazy.buildConversation = fn;
+    } else if (_savedBuildConversationDescriptor) {
+      // eslint-disable-next-line mozilla/valid-lazy
+      Object.defineProperty(
+        lazy,
+        "buildConversation",
+        _savedBuildConversationDescriptor
+      );
+      _savedBuildConversationDescriptor = null;
+    }
+  },
+
+  _setGetConversationsByIdForTesting(fn) {
+    if (fn !== null) {
+      _savedGetConversationsByIdDescriptor = Object.getOwnPropertyDescriptor(
+        lazy,
+        "getConversationsById"
+      );
+      lazy.getConversationsById = fn;
+    } else if (_savedGetConversationsByIdDescriptor) {
+      // eslint-disable-next-line mozilla/valid-lazy
+      Object.defineProperty(
+        lazy,
+        "getConversationsById",
+        _savedGetConversationsByIdDescriptor
+      );
+      _savedGetConversationsByIdDescriptor = null;
+    }
+  },
+
+  _clearResumeActivityCacheForTesting() {
+    _resumeActivityCache.clear();
+  },
 };
-
-let _savedLoadPromptDescriptor = null;
-export function _setLoadPromptForTesting(fn) {
-  if (fn !== null) {
-    _savedLoadPromptDescriptor = Object.getOwnPropertyDescriptor(
-      lazy,
-      "loadPrompt"
-    );
-    lazy.loadPrompt = fn;
-  } else if (_savedLoadPromptDescriptor) {
-    // eslint-disable-next-line mozilla/valid-lazy
-    Object.defineProperty(lazy, "loadPrompt", _savedLoadPromptDescriptor);
-    _savedLoadPromptDescriptor = null;
-  }
-}
-
-let _savedBuildConversationDescriptor = null;
-export function _setBuildConversationForTesting(fn) {
-  if (fn !== null) {
-    _savedBuildConversationDescriptor = Object.getOwnPropertyDescriptor(
-      lazy,
-      "buildConversation"
-    );
-    lazy.buildConversation = fn;
-  } else if (_savedBuildConversationDescriptor) {
-    // eslint-disable-next-line mozilla/valid-lazy
-    Object.defineProperty(
-      lazy,
-      "buildConversation",
-      _savedBuildConversationDescriptor
-    );
-    _savedBuildConversationDescriptor = null;
-  }
-}
-
-let _savedGetConversationsByIdDescriptor = null;
-export function _setGetConversationsByIdForTesting(fn) {
-  if (fn !== null) {
-    _savedGetConversationsByIdDescriptor = Object.getOwnPropertyDescriptor(
-      lazy,
-      "getConversationsById"
-    );
-    lazy.getConversationsById = fn;
-  } else if (_savedGetConversationsByIdDescriptor) {
-    // eslint-disable-next-line mozilla/valid-lazy
-    Object.defineProperty(
-      lazy,
-      "getConversationsById",
-      _savedGetConversationsByIdDescriptor
-    );
-    _savedGetConversationsByIdDescriptor = null;
-  }
-}
-
-export function _clearResumeActivityCacheForTesting() {
-  _resumeActivityCache.clear();
-}
-
-export async function generateResumeActivityConversationStarters() {
-  return JourneyManager.suggestJourneysToResume();
-}
-
-export async function constructConversationToResumeActivity(
-  resumeActivitySuggestion,
-  conversationId
-) {
-  return JourneyManager.constructConversationToResumeJourney(
-    resumeActivitySuggestion,
-    conversationId
-  );
-}

@@ -4,12 +4,7 @@
 
 "use strict";
 
-const {
-  JourneyManager,
-  _clearResumeActivityCacheForTesting,
-  _setBuildConversationForTesting,
-  MAX_NUM_URLS_PER_MEMORY,
-} = ChromeUtils.importESModule(
+const { JourneyManager, MAX_NUM_URLS_PER_MEMORY } = ChromeUtils.importESModule(
   "moz-src:///browser/components/aiwindow/models/memories/journeys/JourneyManager.sys.mjs"
 );
 const { buildConversation, loadPrompt } = ChromeUtils.importESModule(
@@ -53,11 +48,6 @@ const { getPlacesSemanticHistoryManager } = ChromeUtils.importESModule(
 const { PlacesTestUtils } = ChromeUtils.importESModule(
   "resource://testing-common/PlacesTestUtils.sys.mjs"
 );
-
-const { generateResumeActivityConversationStarters } =
-  ChromeUtils.importESModule(
-    "moz-src:///browser/components/aiwindow/models/ConversationSuggestions.sys.mjs"
-  );
 
 add_task(async function test_unsupported_suggestion_arguments() {
   for (const args of [
@@ -129,7 +119,7 @@ add_setup(async function setupResumeActivityConversationStarterTests() {
   });
 
   registerCleanupFunction(async () => {
-    _clearResumeActivityCacheForTesting();
+    JourneyManager._clearResumeActivityCacheForTesting();
     try {
       await PlacesUtils.history.clear();
     } finally {
@@ -249,7 +239,7 @@ async function cleanupResumeActivityTestMemories(addedMemories) {
       await MemoryStore.hardDeleteMemory(memory.id);
     }
   } finally {
-    _clearResumeActivityCacheForTesting();
+    JourneyManager._clearResumeActivityCacheForTesting();
     // Undo any url_hash overrides so history.clear() sees a consistent table.
     await PlacesUtils.withConnectionWrapper(
       "test-resume-activity-restore-url-hash",
@@ -609,7 +599,7 @@ add_task(async function test_generateResumeActivityConversationStarters() {
     const mockEngineManager = new MockEngineManager();
 
     let generationConversation = null;
-    _setBuildConversationForTesting(async (feature, opts) => {
+    JourneyManager._setBuildConversationForTesting(async (feature, opts) => {
       generationConversation = await buildConversation(feature, opts);
       return generationConversation;
     });
@@ -770,7 +760,7 @@ add_task(async function test_generateResumeActivityConversationStarters() {
         "The generation conversation should not track any URLs"
       );
     } finally {
-      _setBuildConversationForTesting(null);
+      JourneyManager._setBuildConversationForTesting(null);
       mockEngineManager.cleanupMocks();
     }
   } finally {
@@ -1209,7 +1199,7 @@ add_task(async function test_resumeActivity_emptyResultIsCached() {
     getMemoriesSpy = sinon.spy(MemoriesManager, "getMemoriesByAttribute");
 
     const firstResult = await JourneyManager.suggestJourneysToResume();
-    const secondResult = await generateResumeActivityConversationStarters();
+    const secondResult = await JourneyManager.suggestJourneysToResume();
 
     Assert.deepEqual(firstResult, [], "No memories should produce no cards");
     Assert.strictEqual(
@@ -1292,7 +1282,7 @@ add_task(async function test_resumeActivity_nonEnglishLocaleReturnsNoCards() {
   }
 });
 
-add_task(async function test_constructConversationToResumeActivity() {
+add_task(async function test_constructConversationToResumeJourney() {
   const testMemories = [
     makeMemory("Test memory", {
       reasoning: "Test reasoning",
