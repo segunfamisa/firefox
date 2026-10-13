@@ -46,6 +46,9 @@ version = "0.16"
 default-features = false
 features = ["gecko"]
 
+[build-dependencies]
+mozbuild = { path = "../../../build/rust/mozbuild" }
+
 [dev-dependencies]
 env_logger = { version = "0.10", default-features = false }
 

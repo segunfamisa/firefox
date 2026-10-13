@@ -410,6 +410,7 @@ dependencies = [
  "libc",
  "libudev",
  "log",
+ "mozbuild",
  "nss-rs",
  "pkcs11-bindings",
  "rand",
