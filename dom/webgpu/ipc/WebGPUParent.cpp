@@ -316,14 +316,13 @@ extern void wgpu_parent_swap_chain_drop(
 }
 
 #ifdef XP_WIN
-extern bool wgpu_parent_get_compositor_device_luid(
+extern void wgpu_parent_get_compositor_device_luid(
     struct WGPUFfiLUID* aOutLuid) {
   auto luid = WebGPUParent::GetCompositorDeviceLuid();
   if (luid.isSome()) {
     *aOutLuid = luid.extract();
-    return true;
   } else {
-    return false;
+    aOutLuid = nullptr;
   }
 }
 #endif

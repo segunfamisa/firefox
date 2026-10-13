@@ -1,5 +1,3 @@
-#![deny(unsafe_op_in_unsafe_fn)]
-
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -75,7 +73,7 @@ impl<'a, T> FfiSlice<'a, T> {
             return &[];
         }
 
-        unsafe { std::slice::from_raw_parts(self.data, self.length) }
+        std::slice::from_raw_parts(self.data, self.length)
     }
 }
 
@@ -121,7 +119,7 @@ impl ByteBuf {
     }
 
     unsafe fn as_slice(&self) -> &[u8] {
-        unsafe { slice::from_raw_parts(self.data, self.len) }
+        slice::from_raw_parts(self.data, self.len)
     }
 }
 
