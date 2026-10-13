@@ -606,6 +606,94 @@ add_task(async function test_headless_extraction_anonymous_http_downgrade() {
   await SpecialPowers.popPrefEnv();
 });
 
+/** The timeout is below the settle delay, so the read fails unless the timeout is extended. */
+add_task(async function test_headless_extraction_settle_delay() {
+  const { PageExtractorParent } = ChromeUtils.importESModule(
+    "resource://gre/actors/PageExtractorParent.sys.mjs"
+  );
+  const HEADLESS_TIMEOUT_MS = 100;
+  const SETTLE_DELAY_MS = 150;
+  const NEVER_MS = 60 * 60 * 1000;
+  const { html } = MLTestUtils.serveHTML();
+  // Each server answers a single request, so every load gets its own page.
+  const readLatePage = async (lateContentMs, settleDelayMs) => {
+    const { url, cleanup } = html`
+      <div id="price">Getting prices</div>
+      <script>
+        setTimeout(() => {
+          document.getElementById("price").textContent = "The price is $299";
+        }, ${lateContentMs});
+      </script>
+    `;
+    try {
+      return await PageExtractorParent.getHeadlessExtractor({
+        urlString: url,
+        settleDelayMs,
+        callback: async pageExtractor => pageExtractor.getText(),
+      });
+    } finally {
+      await cleanup();
+    }
+  };
+
+  await SpecialPowers.pushPrefEnv({
+    set: [["browser.ml.pageExtractor.headlessTimeoutMs", HEADLESS_TIMEOUT_MS]],
+  });
+
+  try {
+    is(
+      (await readLatePage(NEVER_MS, 0)).text,
+      "Getting prices",
+      "Without a settle delay the page is read before its late content lands."
+    );
+
+    is(
+      (await readLatePage(SETTLE_DELAY_MS, SETTLE_DELAY_MS)).text,
+      "The price is $299",
+      "With a settle delay longer than the load timeout the late content is read and the load does not time out."
+    );
+  } finally {
+    await SpecialPowers.popPrefEnv();
+  }
+});
+
+/**
+ * Aborting tears down a headless load instead of waiting out a long settle
+ * delay. The delay far exceeds the test timeout, so a missed abort fails.
+ */
+add_task(async function test_headless_extraction_settle_delay_abort() {
+  const { PageExtractorParent } = ChromeUtils.importESModule(
+    "resource://gre/actors/PageExtractorParent.sys.mjs"
+  );
+  const SETTLE_DELAY_MS = 60 * 60 * 1000;
+  const { html } = MLTestUtils.serveHTML();
+  const { url, cleanup } = html`<div>A page that never settles</div>`;
+  const controller = new AbortController();
+
+  const responded = TestUtils.topicObserved(
+    "http-on-examine-response",
+    subject => subject.QueryInterface(Ci.nsIChannel).URI.spec == url
+  );
+  const extraction = PageExtractorParent.getHeadlessExtractor({
+    urlString: url,
+    settleDelayMs: SETTLE_DELAY_MS,
+    signal: controller.signal,
+    callback: async pageExtractor => pageExtractor.getText(),
+  });
+
+  try {
+    await responded;
+    controller.abort();
+    await Assert.rejects(
+      extraction,
+      error => error.name == "AbortError",
+      "The extraction rejects with an AbortError once the signal aborts."
+    );
+  } finally {
+    await cleanup();
+  }
+});
+
 /**
  * Test page extraction on a restricted page.
  */
