@@ -286,6 +286,13 @@ class StringBuilder {
       twoByteChars().shrinkTo(newLength);
     }
   }
+  void shrinkBy(size_t incr) {
+    if (isLatin1()) {
+      latin1Chars().shrinkBy(incr);
+    } else {
+      twoByteChars().shrinkBy(incr);
+    }
+  }
   bool empty() const { return length() == 0; }
   size_t length() const {
     size_t len = isLatin1() ? latin1Chars().length() : twoByteChars().length();
