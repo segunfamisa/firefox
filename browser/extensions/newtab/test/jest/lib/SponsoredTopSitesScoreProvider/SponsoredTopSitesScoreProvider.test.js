@@ -160,6 +160,77 @@ describe("SponsoredTopSitesScoreProvider", () => {
     });
   });
 
+  describe("#_refreshScores pipeline", () => {
+    const TODAY = 20000;
+    const config = {
+      id: RECORD_ID,
+      targets: {
+        t1: ["example.com"],
+        t2: ["example.org"],
+        t3: ["example.net"],
+      },
+      lookback_days: 2,
+      recency_halflife_days: 1,
+      repeat_visit_weight: 50,
+      normalization_cap: 100,
+      privacy_parameter: 100,
+      trend_days: 2,
+      decimals: 1,
+      allowed_targets: 2,
+    };
+
+    beforeEach(() => {
+      jest.setSystemTime(TODAY * 24 * 60 * 60 * 1000);
+      provider._rs = rsClient;
+    });
+
+    it("stores today's private scores and persists the top trend scores", async () => {
+      getFlags.mockReturnValue({ [RECORD_ID]: true });
+      rsClient.get.mockResolvedValue([config]);
+      executePlacesQuery.mockResolvedValue([
+        { rev_host: "moc.elpmaxe.", day: TODAY, visits: 1 },
+        { rev_host: "gro.elpmaxe.", day: TODAY, visits: 2 },
+        { rev_host: "ten.elpmaxe.", day: TODAY - 1, visits: 4 },
+      ]);
+      jest.spyOn(provider, "_sampleLaplace").mockReturnValue(0);
+      // t3 scored high on earlier days but its trend is downward
+      cacheStore.scoreHistory = [
+        { day: TODAY - 2, scores: { t3: 0.8 } },
+        { day: TODAY - 1, scores: { t3: 0.5 } },
+      ];
+
+      await provider._refreshScores();
+
+      expect(cacheStore.scoreHistory.at(-1)).toEqual({
+        day: TODAY,
+        scores: { t1: 1 / 3, t2: 0.5, t3: 0.3125 },
+      });
+      expect(cacheStore.scoreHistory.at(-2)).toEqual({
+        day: TODAY - 1,
+        scores: { t3: 0.5 },
+      });
+      expect(await provider.getScores()).toEqual({ t2: 0.5, t1: 0.3 });
+      expect(prefStore[PREF_LAST_TIME]).toBe(Math.round(Date.now() / 1000));
+    });
+
+    it("caps the privacy parameter at 1", async () => {
+      getFlags.mockReturnValue({ [RECORD_ID]: true });
+      rsClient.get.mockResolvedValue([{ ...config, privacy_parameter: 1000 }]);
+      executePlacesQuery.mockResolvedValue([
+        { rev_host: "moc.elpmaxe.", day: TODAY, visits: 1 },
+      ]);
+      const sampleLaplace = jest
+        .spyOn(provider, "_sampleLaplace")
+        .mockReturnValue(0);
+
+      await provider._refreshScores();
+
+      // With an overlap of 1, the scale is sqrt(1) / (1 * 2 * 1) = 0.5. An
+      // uncapped privacy parameter of 10 would give 0.05.
+      expect(sampleLaplace).toHaveBeenCalledWith(0.5);
+    });
+  });
+
   describe("#uninit", () => {
     it("clears the timer and client", async () => {
       getFlags.mockReturnValue({ [RECORD_ID]: true });
@@ -538,6 +609,141 @@ describe("SponsoredTopSitesScoreProvider", () => {
         sum += Math.abs(provider._sampleLaplace(1));
       }
       expect(sum / samples).toBeCloseTo(1, 1);
+    });
+  });
+
+  describe("#_appendScoreHistory", () => {
+    it("persists each day's scores in order", async () => {
+      await provider._appendScoreHistory(100, { t1: 0.1 });
+      await provider._appendScoreHistory(100, { t1: 0.9 });
+      await provider._appendScoreHistory(101, { t1: 0.2 });
+
+      expect(cacheStore.scoreHistory).toEqual([
+        { day: 100, scores: { t1: 0.1 } },
+        { day: 101, scores: { t1: 0.2 } },
+      ]);
+    });
+
+    it("keeps only the 30 most recent days", async () => {
+      for (let day = 1; day <= 31; day++) {
+        await provider._appendScoreHistory(day, { t1: day });
+      }
+
+      expect(cacheStore.scoreHistory).toHaveLength(30);
+      expect(cacheStore.scoreHistory[0].day).toBe(2);
+      expect(cacheStore.scoreHistory.at(-1).day).toBe(31);
+    });
+  });
+
+  describe("#_getScoreHistory", () => {
+    it("returns the scores keyed by day offset from today", async () => {
+      cacheStore.scoreHistory = [
+        { day: 95, scores: { t1: 0.1 } },
+        { day: 99, scores: { t1: 0.2 } },
+        { day: 100, scores: { t1: 0.3 } },
+      ];
+
+      expect(await provider._getScoreHistory(100)).toEqual(
+        new Map([
+          [-5, { t1: 0.1 }],
+          [-1, { t1: 0.2 }],
+          [0, { t1: 0.3 }],
+        ])
+      );
+    });
+
+    it("returns an empty map when there is no history", async () => {
+      expect(await provider._getScoreHistory(100)).toEqual(new Map());
+    });
+  });
+
+  describe("#_trendFitting", () => {
+    const config = {
+      targets: {
+        t1: ["example.com"],
+        t2: ["example.org"],
+        t3: ["example.net"],
+      },
+      trend_days: 5,
+    };
+
+    it("fits each target over the days within the trend window", () => {
+      // t1 follows y = 0.5 + 0.1x, so the fit at day 0 is 0.5. Day -5 is
+      // outside the window and would pull the fit down if it were included.
+      const scoreHistory = new Map([
+        [-5, { t1: 10, t2: 10 }],
+        [-4, { t1: 0.1, t2: 0.45 }],
+        [-3, { t1: 0.2 }],
+        [-2, { t2: 0.3 }],
+        [0, { t1: 0.5, t2: 0.45 }],
+      ]);
+
+      const scores = provider._trendFitting(scoreHistory, config);
+
+      expect(scores.t1).toBeCloseTo(0.5);
+      expect(scores.t2).toBeCloseTo(0.4);
+      expect(scores).not.toHaveProperty("t3");
+    });
+
+    it("returns no scores when there is no history", () => {
+      expect(provider._trendFitting(new Map(), config)).toEqual({});
+    });
+  });
+
+  describe("#_linearFitAtZero", () => {
+    it("recovers the intercept of points on a line", () => {
+      // y = 0.5 + 0.01x
+      const points = [-1, -2, -3, -5].map(x => [x, 0.5 + 0.01 * x]);
+      expect(provider._linearFitAtZero(points)).toBeCloseTo(0.5);
+    });
+
+    it("returns the least-squares fit for points not on a line", () => {
+      expect(
+        provider._linearFitAtZero([
+          [-2, 0.5],
+          [-1, 0.75],
+          [0, 0.7],
+        ])
+      ).toBeCloseTo(0.75);
+    });
+
+    it("returns the only y value for a single point", () => {
+      expect(provider._linearFitAtZero([[-3, 0.4]])).toBe(0.4);
+    });
+  });
+
+  describe("#_postProcessScores", () => {
+    // Each score is stored as a single day 0 entry, so the trend fit returns
+    // it unchanged and it tests only the sorting, clamping, and rounding.
+    function postProcess(scores, config) {
+      return provider._postProcessScores(new Map([[0, scores]]), {
+        targets: Object.fromEntries(Object.keys(scores).map(t => [t, []])),
+        trend_days: 1,
+        ...config,
+      });
+    }
+
+    it("clamps to [0, 1] and rounds down to the configured decimals", () => {
+      expect(
+        postProcess(
+          { t1: 0.19, t2: 1.4, t3: -0.2, t4: 0.5 },
+          { decimals: 1, allowed_targets: 10 }
+        )
+      ).toEqual({ t1: 0.1, t2: 1, t3: 0, t4: 0.5 });
+
+      expect(
+        postProcess({ t1: 0.456 }, { decimals: 2, allowed_targets: 10 })
+      ).toEqual({ t1: 0.45 });
+    });
+
+    it("keeps the highest scoring targets, ranked before rounding", () => {
+      // All round down to 0.1, but t2 has the highest fitted score then t4.
+      const scores = postProcess(
+        { t1: 0.14, t2: 0.19, t3: 0.11, t4: 0.17 },
+        { decimals: 1, allowed_targets: 2 }
+      );
+
+      expect(scores).toEqual({ t2: 0.1, t4: 0.1 });
     });
   });
 });

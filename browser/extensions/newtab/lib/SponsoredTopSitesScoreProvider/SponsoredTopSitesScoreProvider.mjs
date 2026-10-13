@@ -31,6 +31,10 @@ const FLAG_PREFIX = "sponsored_top_site_scoring";
 const MAX_PRIVACY_PARAMETER = 1;
 const CACHE_KEY = "sponsored_topsites_scoring_cache";
 const SCORES_CACHE_KEY = "scores";
+const HISTORY_CACHE_KEY = "scoreHistory";
+
+// The number of daily private scores stored for post-processing.
+const HISTORY_SIZE = 30;
 
 const PREF_LAST_RELEASE_TIME =
   "browser.newtabpage.activity-stream.sponsoredTopSitesScoring.lastReleaseTime";
@@ -104,11 +108,13 @@ export class SponsoredTopSitesScoreProvider {
       return;
     }
 
+    const todayDay = Math.floor((Date.now() * 1000) / US_PER_DAY);
     const domainDayCounts = await this._getDomainDayCounts(config);
     const scores = this._sponsoredScores(config, domainDayCounts);
-    // TODO: post-process the private scores before they are sent to the server.
     const scoresWithDP = this._differentiallyPrivateScores(scores, config);
-    await this._setScores(scoresWithDP);
+    await this._appendScoreHistory(todayDay, scoresWithDP);
+    const scoreHistory = await this._getScoreHistory(todayDay);
+    await this._setScores(this._postProcessScores(scoreHistory, config));
     Services.prefs.setIntPref(PREF_LAST_RELEASE_TIME, now);
   }
 
@@ -372,6 +378,112 @@ export class SponsoredTopSitesScoreProvider {
     crypto.getRandomValues(randomValues);
     const u = (randomValues[0] + 0.5) / 2 ** 32;
     return u < 0.5 ? scale * Math.log(2 * u) : -scale * Math.log(2 * (1 - u));
+  }
+
+  /**
+   * Persist a day's private scores, keeping only the most recent HISTORY_SIZE
+   * days. A day that is not newer than the latest stored day is ignored so
+   * that a single day never gets more than one noise draw.
+   *
+   * @param {number} todayDay Today's day number.
+   * @param {object} privateScores The scores from _differentiallyPrivateScores.
+   * @returns {Promise<void>} Resolves once the history is persisted.
+   */
+  async _appendScoreHistory(todayDay, privateScores) {
+    const scoreHistory = (await this._cache.get(HISTORY_CACHE_KEY)) ?? [];
+    if (scoreHistory.at(-1)?.day >= todayDay) {
+      return;
+    }
+    scoreHistory.push({ day: todayDay, scores: privateScores });
+    await this._cache.set(HISTORY_CACHE_KEY, scoreHistory.slice(-HISTORY_SIZE));
+  }
+
+  /**
+   * Get the stored private scores keyed by day offset.
+   *
+   * @param {number} todayDay Today's day number.
+   * @returns {Promise<Map<number, object>>} The private scores keyed by day
+   *  offset relative to today (0 is today, -1 is yesterday, ...).
+   */
+  async _getScoreHistory(todayDay) {
+    const scoreHistory = (await this._cache.get(HISTORY_CACHE_KEY)) ?? [];
+    return new Map(
+      scoreHistory.map(({ day, scores }) => [day - todayDay, scores])
+    );
+  }
+
+  /**
+   * Fit today's score for each target to the trend from a least-squares linear
+   * fit of its private scores over the last config.trend_days.
+   *
+   * @param {Map<number, object>} scoreHistory The private scores keyed by day
+   *  offset, from _getScoreHistory.
+   * @param {object} config The active Remote Settings config.
+   * @returns {object} The predicted score keyed by target.
+   */
+  _trendFitting(scoreHistory, config) {
+    const trendScores = {};
+    for (const target of Object.keys(config.targets ?? {})) {
+      /** @type {Array<[number, number]>} */
+      const points = [];
+      for (const [day, scores] of scoreHistory) {
+        if (day > -config.trend_days && target in scores) {
+          points.push([day, scores[target]]);
+        }
+      }
+      if (points.length) {
+        trendScores[target] = this._linearFitAtZero(points);
+      }
+    }
+    return trendScores;
+  }
+
+  /**
+   * Fit a least-squares line through the points and evaluate it at x = 0.
+   *
+   * @param {Array<[number, number]>} points Non-empty list of [x, y] pairs.
+   * @returns {number} The fitted value at x = 0.
+   */
+  _linearFitAtZero(points) {
+    const n = points.length;
+    const meanX = points.reduce((sum, [x]) => sum + x, 0) / n;
+    const meanY = points.reduce((sum, [, y]) => sum + y, 0) / n;
+
+    let covariance = 0;
+    let varianceX = 0;
+    for (const [x, y] of points) {
+      covariance += (x - meanX) * (y - meanY);
+      varianceX += (x - meanX) ** 2;
+    }
+    if (!varianceX) {
+      return meanY;
+    }
+
+    const slope = covariance / varianceX;
+    return meanY - slope * meanX;
+  }
+
+  /**
+   * Fit the trend for today's score, keep the config.allowed_targets highest
+   * scoring targets, then clamp their scores to [0, 1] and round them down
+   * to config.decimals decimal places.
+   *
+   * @param {Map<number, object>} scoreHistory The private scores keyed by day
+   *  offset, from _getScoreHistory.
+   * @param {object} config The active Remote Settings config.
+   * @returns {object} The rounded score keyed by target, highest first.
+   */
+  _postProcessScores(scoreHistory, config) {
+    const factor = 10 ** config.decimals;
+    return Object.fromEntries(
+      Object.entries(this._trendFitting(scoreHistory, config))
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, config.allowed_targets)
+        .map(([target, score]) => [
+          target,
+          Math.floor(Math.min(Math.max(score, 0), 1) * factor) / factor,
+        ])
+    );
   }
 
   /**
