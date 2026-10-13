@@ -15,7 +15,6 @@
  */
 
 import { getSkillPrompt } from "moz-src:///browser/components/aiwindow/models/PromptLoader.sys.mjs";
-import { openAIEngine } from "moz-src:///browser/components/aiwindow/models/openAIEngine.sys.mjs";
 import { searchBrowsingHistory as implSearchBrowsingHistory } from "moz-src:///browser/components/aiwindow/models/SearchBrowsingHistory.sys.mjs";
 import {
   manageTabsAction,
@@ -184,12 +183,13 @@ export const SEARCH_THE_WEB_PATH = Object.freeze({
  * The answers path is only available on Mozilla MLPA endpoint - custom endpoints
  * must use search_the_web_fast or grounded
  *
+ * @param {ChatConversation} conversation
  * @returns {SEARCH_THE_WEB_PATH}
  */
-export function selectSearchTheWebPath() {
+export function selectSearchTheWebPath(conversation) {
   if (
     Services.prefs.getBoolPref(SEARCH_THE_WEB_ANSWERS_PREF, false) &&
-    !openAIEngine.usesCustomEndpoint()
+    conversation.engine?.isDefaultEndpoint
   ) {
     return SEARCH_THE_WEB_PATH.ANSWERS;
   }
@@ -346,10 +346,11 @@ export const SEARCH_THE_WEB_TOOL_CONFIG_FAST = {
  * The search_the_web config for the path that will run, or null for the
  * grounded path, whose config is the one already in `toolsConfig`.
  *
+ * @param {ChatConversation} conversation
  * @returns {object|null}
  */
-export function searchTheWebToolConfig() {
-  switch (selectSearchTheWebPath()) {
+export function searchTheWebToolConfig(conversation) {
+  switch (selectSearchTheWebPath(conversation)) {
     case SEARCH_THE_WEB_PATH.ANSWERS:
       return SEARCH_THE_WEB_TOOL_CONFIG_ANSWERS;
     case SEARCH_THE_WEB_PATH.FAST:
