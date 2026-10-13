@@ -843,7 +843,10 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
   const bool backfaceVisible = !aItem->BackfaceIsHidden();
   const bool antialias = ShouldAntiAlias();
 
-  // Fills the shape with a solid color.
+  // Fills the shape with a solid color. A rounded shape is a WebRender border
+  // whose curve the border shader already anti-aliases, and it keeps the
+  // device pixel snapping that makes its cached corner textures composite
+  // exactly, so only the rect case carries the anti-aliasing flag.
   auto pushSolidFill = [&](wr::ColorF aColor) {
     wr::LayoutRect wrRect = toDevice(shape.AsRect());
     if (shape.IsRect()) {
@@ -889,12 +892,12 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
       aBuilder.PushLinearGradient(wrRect, wrRect, backfaceVisible,
                                   toItemVector(aG.mStart), toItemVector(aG.mEnd),
                                   aG.mStops, aG.mExtendMode, tileSize,
-                                  tileSpacing);
+                                  tileSpacing, antialias);
     } else {
       aBuilder.PushRadialGradient(
           wrRect, wrRect, backfaceVisible, toItemVector(aG.mCenter),
           wr::ToLayoutSize(aG.mRadii * cssToDev), aG.mStops, aG.mExtendMode,
-          tileSize, tileSpacing);
+          tileSize, tileSpacing, antialias);
     }
   };
 
@@ -1005,7 +1008,8 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
     wr::BorderSide sides[4] = {side, side, side, side};
     aBuilder.PushBorder(wrRect, wrRect, backfaceVisible, widths,
                         Range<const wr::BorderSide>(sides, 4), wrRadii,
-                        wr::EmptyLayoutSideOffsets(), wr::AntialiasBorder::Yes);
+                        wr::EmptyLayoutSideOffsets(), wr::AntialiasBorder::Yes,
+                        antialias);
   };
 
   uint32_t paintOrder = style->mPaintOrder;

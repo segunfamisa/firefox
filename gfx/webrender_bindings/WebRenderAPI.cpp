@@ -1484,6 +1484,7 @@ void DisplayListBuilder::PushRoundedRect(const wr::LayoutRect& aBounds,
 
   // Anti-aliased borders are required for rounded borders.
   wr_dp_push_border(mWrState, aBounds, aClip, aIsBackfaceVisible,
+                    /* force_antialiasing = */ false,
                     &mCurrentSpaceAndClipChain, wr::AntialiasBorder::Yes,
                     widths, side, side, side, side, radii, inset);
 }
@@ -1544,11 +1545,12 @@ void DisplayListBuilder::PushLinearGradient(
     bool aIsBackfaceVisible, const wr::LayoutVector2D& aStartPoint,
     const wr::LayoutVector2D& aEndPoint,
     const nsTArray<wr::GradientStop>& aStops, wr::ExtendMode aExtendMode,
-    const wr::LayoutSize aTileSize, const wr::LayoutSize aTileSpacing) {
-  wr_dp_push_linear_gradient(mWrState, aBounds, aClip, aIsBackfaceVisible,
-                             &mCurrentSpaceAndClipChain, aStartPoint, aEndPoint,
-                             aStops.Elements(), aStops.Length(), aExtendMode,
-                             aTileSize, aTileSpacing);
+    const wr::LayoutSize aTileSize, const wr::LayoutSize aTileSpacing,
+    bool aForceAntiAliasing) {
+  wr_dp_push_linear_gradient(
+      mWrState, aBounds, aClip, aIsBackfaceVisible, aForceAntiAliasing,
+      &mCurrentSpaceAndClipChain, aStartPoint, aEndPoint, aStops.Elements(),
+      aStops.Length(), aExtendMode, aTileSize, aTileSpacing);
 }
 
 void DisplayListBuilder::PushRadialGradient(
@@ -1556,11 +1558,11 @@ void DisplayListBuilder::PushRadialGradient(
     bool aIsBackfaceVisible, const wr::LayoutVector2D& aCenter,
     const wr::LayoutSize& aRadius, const nsTArray<wr::GradientStop>& aStops,
     wr::ExtendMode aExtendMode, const wr::LayoutSize aTileSize,
-    const wr::LayoutSize aTileSpacing) {
-  wr_dp_push_radial_gradient(mWrState, aBounds, aClip, aIsBackfaceVisible,
-                             &mCurrentSpaceAndClipChain, aCenter, aRadius,
-                             aStops.Elements(), aStops.Length(), aExtendMode,
-                             aTileSize, aTileSpacing);
+    const wr::LayoutSize aTileSpacing, bool aForceAntiAliasing) {
+  wr_dp_push_radial_gradient(
+      mWrState, aBounds, aClip, aIsBackfaceVisible, aForceAntiAliasing,
+      &mCurrentSpaceAndClipChain, aCenter, aRadius, aStops.Elements(),
+      aStops.Length(), aExtendMode, aTileSize, aTileSpacing);
 }
 
 void DisplayListBuilder::PushConicGradient(
@@ -1707,14 +1709,16 @@ void DisplayListBuilder::PushBorder(
     const wr::LayoutRect& aBounds, const wr::LayoutRect& aClip,
     bool aIsBackfaceVisible, const wr::LayoutSideOffsets& aWidths,
     const Range<const wr::BorderSide>& aSides, const wr::BorderRadius& aRadius,
-    const wr::LayoutSideOffsets& aInset, wr::AntialiasBorder aAntialias) {
+    const wr::LayoutSideOffsets& aInset, wr::AntialiasBorder aAntialias,
+    bool aForceAntiAliasing) {
   MOZ_ASSERT(aSides.length() == 4);
   if (aSides.length() != 4) {
     return;
   }
   wr_dp_push_border(mWrState, aBounds, aClip, aIsBackfaceVisible,
-                    &mCurrentSpaceAndClipChain, aAntialias, aWidths, aSides[0],
-                    aSides[1], aSides[2], aSides[3], aRadius, aInset);
+                    aForceAntiAliasing, &mCurrentSpaceAndClipChain, aAntialias,
+                    aWidths, aSides[0], aSides[1], aSides[2], aSides[3],
+                    aRadius, aInset);
 }
 
 void DisplayListBuilder::PushBorderImage(const wr::LayoutRect& aBounds,
