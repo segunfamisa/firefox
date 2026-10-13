@@ -336,6 +336,12 @@ void ExternalEngineStateMachine::OnMetadataRead(MetadataHolder&& aMetadata) {
       Info().mMediaSeekableOnlyInBufferedRanges;
 
   if (!IsFormatSupportedByExternalEngine(*mInfo)) {
+    // Only record it when a CDM is waiting for the engine, because clear
+    // playback falls back here on every machine without hardware video
+    // decoding.
+    if (mPendingCDMProxy) {
+      ReportTelemetry(NS_ERROR_DOM_MEDIA_EXTERNAL_ENGINE_NOT_SUPPORTED_ERR);
+    }
     // The external engine doesn't support the type, try to notify the decoder
     // to use our own state machine again. Not a real "error", because it would
     // fallback to another state machine, unless a CDM is pending.

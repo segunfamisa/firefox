@@ -3,6 +3,7 @@
 <head>
   <title>Media Engine only test : setMediaKeys() does not wait for the engine to start</title>
   <script src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script src="/tests/SimpleTest/GleanTest.js"></script>
   <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
 </head>
 <body>
@@ -95,8 +96,9 @@ add_task(async function testKeysReplacedBeforeEngineStarts() {
 
 // The media engine cannot decode FLAC. With keys set before the stream
 // arrives, the state machine it falls back to cannot use their CDM, so the
-// refusal must surface as a media error.
+// refusal must surface as a media error, and it is recorded.
 add_task(async function testEngineRefusesStreamWithKeysSet() {
+  await GleanTest.testResetFOG();
   const { video, sourceBuffer } =
     await createElementWithOpenMediaSource(kFLACType);
   const mediaKeys = await createMediaKeys();
@@ -109,12 +111,15 @@ add_task(async function testEngineRefusesStreamWithKeysSet() {
   await error;
   is(video.error?.code, MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED,
      "the refused stream raised a media error");
+  is(await refusalEventCount(), 1, "the refusal was recorded");
   cleanUp(video);
 });
 
 // A clear stream that the engine refuses falls back to the normal state
-// machine and plays.
+// machine and plays. Nothing is recorded, because clear playback reaches the
+// same refusal on every machine without hardware video decoding.
 add_task(async function testEngineRefusesClearStream() {
+  await GleanTest.testResetFOG();
   const { video, sourceBuffer } =
     await createElementWithOpenMediaSource(kFLACType);
   const playing = new Promise(r =>
@@ -123,12 +128,14 @@ add_task(async function testEngineRefusesClearStream() {
   video.play().catch(() => {});
   await playing;
   is(video.error, null, "the fallback played the clear stream");
+  is(await refusalEventCount(), 0, "nothing was recorded");
   cleanUp(video);
 });
 
 // Keys cleared before a clear stream arrives leave no CDM to serve, so the
 // stream falls back and plays as if no keys were ever set.
 add_task(async function testEngineRefusesClearStreamWithKeysCleared() {
+  await GleanTest.testResetFOG();
   const { video, sourceBuffer } =
     await createElementWithOpenMediaSource(kFLACType);
   const mediaKeys = await createMediaKeys();
@@ -143,6 +150,7 @@ add_task(async function testEngineRefusesClearStreamWithKeysCleared() {
   video.play().catch(() => {});
   await playing;
   is(video.error, null, "the fallback played the clear stream");
+  is(await refusalEventCount(), 0, "nothing was recorded");
   cleanUp(video);
 });
 
@@ -188,6 +196,14 @@ async function appendClearFLAC(aSourceBuffer) {
     aSourceBuffer.appendBuffer(await fetchBuffer(kClearFLACPath + name));
     await updated;
   }
+}
+
+// Counts recorded media engine errors for a stream the engine refused.
+async function refusalEventCount() {
+  const events = (await GleanTest.mfcdm.error.testGetValue()) ?? [];
+  return Array.from(events).filter(e =>
+    e.extra?.error_name ==
+      "NS_ERROR_DOM_MEDIA_EXTERNAL_ENGINE_NOT_SUPPORTED_ERR").length;
 }
 
 // Key IDs and keys of bipbop-clearkey-video-av1.mp4, as hex.
