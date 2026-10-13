@@ -69,7 +69,10 @@ function assign(popup) {
     ),
   ];
   let otherItems = items.filter(
-    item => !item.matches("[auto-accesskey], [hidden], [role][disabled]")
+    item =>
+      !item.matches(
+        "[auto-accesskey], [hidden], :is(menuitem, menu)[role][disabled]"
+      )
   );
   let othersHaveNoKeys =
     otherItems.length &&
