@@ -410,7 +410,7 @@ def _collect(pipe, poll_interval):
             sleep_interval = max(poll_interval / 2, poll_interval - collection_overhead)
 
     except Exception as e:
-        warnings.warn("_collect failed: %s" % e)
+        warnings.warn(f"_collect failed: {e}")
 
     finally:
         # Record the processes that started while monitoring and are still
@@ -663,7 +663,7 @@ class SystemResourceMonitor:
             virt = psutil.virtual_memory()
             swap = psutil.swap_memory()
         except Exception as e:
-            warnings.warn("psutil failed to run: %s" % e)
+            warnings.warn(f"psutil failed to run: {e}")
             return
 
         self._cpu_cores = len(cpu_percent)
@@ -872,7 +872,7 @@ class SystemResourceMonitor:
                 ) = self._pipe.recv()
             except Exception as e:
                 if not self._stopped:
-                    warnings.warn("failed to receive data: %s" % e)
+                    warnings.warn(f"failed to receive data: {e}")
                 break
 
             if start_time == "process":
@@ -901,8 +901,7 @@ class SystemResourceMonitor:
                 self._stream_measurement(m)
             except Exception:
                 warnings.warn(
-                    "failed to read the received data: %s"
-                    % str((
+                    "failed to read the received data: {}".format((
                         start_time,
                         end_time,
                         io_diff,
@@ -2129,10 +2128,10 @@ class SystemResourceMonitor:
                 end_time = t
 
         if start_time is None:
-            raise Exception("Could not find start event: %s" % start_event)
+            raise Exception(f"Could not find start event: {start_event}")
 
         if end_time is None:
-            raise Exception("Could not find end event: %s" % end_event)
+            raise Exception(f"Could not find end event: {end_event}")
 
         return self.range_usage(start_time, end_time)
 
