@@ -7,3 +7,5 @@ prefs = [
 ]
 
 ["browser_aitab_heading_font.js"]
+
+["browser_aitab_telemetry.js"]
