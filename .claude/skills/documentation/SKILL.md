@@ -6,6 +6,8 @@ description: Use this skill when working with Firefox documentation,
   documentation, or adding new docs.
 ---
 
+# Firefox documentation
+
 ## Overview
 
 Firefox documentation is built using **Sphinx**
