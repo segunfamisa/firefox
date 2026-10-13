@@ -3999,8 +3999,13 @@ void BaseCompiler::emitBranchSetup(BranchState* b) {
           break;
         }
         case ValType::I64: {
-          pop2xI64(&b->i64.lhs, &b->i64.rhs);
-          b->i64.rhsImm = false;
+          if (popConst(&b->i64.imm)) {
+            b->i64.lhs = popI64();
+            b->i64.rhsImm = true;
+          } else {
+            pop2xI64(&b->i64.lhs, &b->i64.rhs);
+            b->i64.rhsImm = false;
+          }
           break;
         }
         case ValType::F32: {
@@ -6662,6 +6667,16 @@ void BaseCompiler::emitCompareI64(Assembler::Condition compareOp,
   MOZ_ASSERT(compareType == ValType::I64);
 
   if (sniffConditionalControlCmp(compareOp, compareType)) {
+    return;
+  }
+
+  int64_t c;
+  if (popConst(&c)) {
+    RegI64 rs0 = popI64();
+    RegI32 rd(fromI64(rs0));
+    masm.cmp64Set(compareOp, rs0, Imm64(c), rd);
+    freeI64Except(rs0, rd);
+    pushI32(rd);
     return;
   }
 
