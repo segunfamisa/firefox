@@ -1380,8 +1380,8 @@ void DocAccessible::BindToDocument(LocalAccessible* aAccessible,
     }
   }
 
-  if (mIPCDoc && HasLoadState(eTreeConstructed)) {
-    // Child process and not in initial tree construction phase.
+  if (HasLoadState(eTreeConstructed)) {
+    // Not in initial tree construction phase.
     // We need to track inserted accessibles so we don't mark them as moved
     // before their initial show event.
     // If this is the initial tree construction, we will push the tree to the
@@ -2958,7 +2958,6 @@ void DocAccessible::PutChildrenBack(
 }
 
 void DocAccessible::TrackMovedAccessible(LocalAccessible* aAcc) {
-  MOZ_ASSERT(mIPCDoc);
   if (!HasLoadState(eTreeConstructed)) {
     // We're still building the initial tree, so it hasn't been sent over IPC
     // yet. Any move at this point is thus an insertion from the perspective of
@@ -3018,9 +3017,7 @@ bool DocAccessible::MoveChild(LocalAccessible* aChild,
   if (curParent == aNewParent) {
     MOZ_ASSERT(aChild->IndexInParent() != aIdxInParent, "No move case");
     curParent->RelocateChild(aIdxInParent, aChild);
-    if (mIPCDoc) {
-      TrackMovedAccessible(aChild);
-    }
+    TrackMovedAccessible(aChild);
 
 #ifdef A11Y_LOG
     logging::TreeInfo("move child: parent tree after", logging::eVerbose,
@@ -3047,9 +3044,7 @@ bool DocAccessible::MoveChild(LocalAccessible* aChild,
 
   TreeMutation imut(aNewParent);
   aNewParent->InsertChildAt(aIdxInParent, aChild);
-  if (mIPCDoc) {
-    TrackMovedAccessible(aChild);
-  }
+  TrackMovedAccessible(aChild);
   imut.AfterInsertion(aChild);
   imut.Done();
 
