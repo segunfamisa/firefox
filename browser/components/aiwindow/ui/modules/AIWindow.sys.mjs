@@ -45,6 +45,7 @@ const PREF_MONITOR_ANNOUNCEMENT =
 
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
+  AITab: "moz-src:///browser/components/aiwindow/models/aitab/AITab.sys.mjs",
   getAllModelsData:
     "moz-src:///browser/components/aiwindow/models/Utils.sys.mjs",
   AIWindowTabStatesManager:
@@ -1058,9 +1059,7 @@ export const AIWindow = {
    *   from, for telemetry.
    */
   createAITab(win, urls, source) {
-    const pageUrls = urls.filter(url =>
-      ["http:", "https:"].includes(URL.parse(url)?.protocol)
-    );
+    const pageUrls = lazy.AITab.selectContextUrls(urls);
     if (!pageUrls.length) {
       return;
     }

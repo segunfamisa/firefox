@@ -1608,7 +1608,7 @@ export async function createAITab(
   const action = isModification ? "updated" : "created";
   const result = await lazy.AITab.generateAITab(
     {
-      urlList: url_list,
+      urlList: lazy.AITab.selectContextUrls(url_list),
       focus,
       rawContent: raw_content,
       modifySlug: modify_slug,
