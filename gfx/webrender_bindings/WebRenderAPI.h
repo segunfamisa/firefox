@@ -662,9 +662,14 @@ class DisplayListBuilder final {
                              const wr::LayoutRect& aClip,
                              bool aIsBackfaceVisible, const wr::ColorF& aColor,
                              const WrAnimationProperty* aAnimation);
+  // Fills an ellipse inscribed in aBounds.
+  void PushEllipse(const wr::LayoutRect& aBounds, const wr::LayoutRect& aClip,
+                   bool aIsBackfaceVisible, const wr::ColorF& aColor);
+  // Fills a rectangle with the given elliptical corner radii (the same for
+  // all four corners). The radii must not exceed half the size of aBounds.
   void PushRoundedRect(const wr::LayoutRect& aBounds,
                        const wr::LayoutRect& aClip, bool aIsBackfaceVisible,
-                       const wr::ColorF& aColor);
+                       const wr::LayoutSize& aRadii, const wr::ColorF& aColor);
   void PushHitTest(const wr::LayoutRect& aBounds, const wr::LayoutRect& aClip,
                    bool aIsBackfaceVisible,
                    const layers::ScrollableLayerGuid::ViewID& aScrollId,

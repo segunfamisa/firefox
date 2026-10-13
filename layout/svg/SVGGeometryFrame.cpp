@@ -562,7 +562,7 @@ void SVGGeometryFrame::Render(gfxContext* aContext,
   aContext->SetMatrixDouble(aTransform);
 
   if (HasAnyStateBits(NS_STATE_SVG_CLIPPATH_CHILD)) {
-    // We don't complicate this code with GetAsSimplePath since the cost of
+    // We don't complicate this code with GetAsSimpleShape since the cost of
     // masking will dwarf Path creation overhead anyway.
     RefPtr<Path> path = element->GetOrBuildPath(drawTarget, fillRule);
     if (path) {
@@ -573,11 +573,14 @@ void SVGGeometryFrame::Render(gfxContext* aContext,
     return;
   }
 
-  SVGGeometryElement::SimplePath simplePath;
+  SVGGeometryElement::SimpleShape shape;
   RefPtr<Path> path;
 
-  element->GetAsSimplePath(&simplePath);
-  if (!simplePath.IsPath()) {
+  // DrawTarget has dedicated methods for rects and lines. Other shapes go
+  // through a Path.
+  element->GetAsSimpleShape(&shape);
+  if (!shape.IsRect() && !shape.IsLine()) {
+    shape.Reset();
     path = element->GetOrBuildPath(drawTarget, fillRule);
     if (!path) {
       return;
@@ -594,8 +597,9 @@ void SVGGeometryFrame::Render(gfxContext* aContext,
 
     if (fillPattern.GetPattern()) {
       DrawOptions drawOptions(1.0f, CompositionOp::OP_OVER, aaMode);
-      if (simplePath.IsRect()) {
-        drawTarget->FillRect(simplePath.AsRect(), fillPattern, drawOptions);
+      if (shape.IsRect()) {
+        drawTarget->FillRect(shape.AsRect().ToUnknownRect(), fillPattern,
+                             drawOptions);
       } else if (path) {
         drawTarget->Fill(path, fillPattern, drawOptions);
       }
@@ -614,7 +618,7 @@ void SVGGeometryFrame::Render(gfxContext* aContext,
         if (!path) {
           return;
         }
-        simplePath.Reset();
+        shape.Reset();
       }
       // We need to transform the path back into the appropriate ancestor
       // coordinate system, and paint it it that coordinate system, in order
@@ -636,12 +640,13 @@ void SVGGeometryFrame::Render(gfxContext* aContext,
         return;
       }
       DrawOptions drawOptions(1.0f, CompositionOp::OP_OVER, aaMode);
-      if (simplePath.IsRect()) {
-        drawTarget->StrokeRect(simplePath.AsRect(), strokePattern,
+      if (shape.IsRect()) {
+        drawTarget->StrokeRect(shape.AsRect().ToUnknownRect(), strokePattern,
                                strokeOptions, drawOptions);
-      } else if (simplePath.IsLine()) {
-        drawTarget->StrokeLine(simplePath.Point1(), simplePath.Point2(),
-                               strokePattern, strokeOptions, drawOptions);
+      } else if (shape.IsLine()) {
+        drawTarget->StrokeLine(shape.Point1().ToUnknownPoint(),
+                               shape.Point2().ToUnknownPoint(), strokePattern,
+                               strokeOptions, drawOptions);
       } else {
         drawTarget->Stroke(path, strokePattern, strokeOptions, drawOptions);
       }
@@ -698,11 +703,21 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
 
   SVGGeometryElement* element = static_cast<SVGGeometryElement*>(GetContent());
 
-  SVGGeometryElement::SimplePath simplePath;
-  element->GetAsSimplePath(&simplePath);
+  SVGGeometryElement::SimpleShape shape;
+  element->GetAsSimpleShape(&shape);
 
-  if (!simplePath.IsRect()) {
-    return Err("path is not a simple rect");
+  if (!shape.IsRoundedRect()) {
+    return Err("shape is not a rect or an ellipse");
+  }
+
+  if (!shape.IsRect()) {
+    if (!StaticPrefs::gfx_webrender_svg_shapes_ellipses()) {
+      return Err("shape is not a simple rect");
+    }
+    // WebRender always anti-aliases rounded corners.
+    if (HasCrispEdges()) {
+      return Err("rounded shape with shape-rendering: crispEdges");
+    }
   }
 
   const nsStyleSVG* style = StyleSVG();
@@ -710,13 +725,6 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
 
   if (!style->mFill.kind.IsColor()) {
     return Err("fill is not a plain color");
-  }
-
-  switch (style->mFill.kind.tag) {
-    case StyleSVGPaintKind::Tag::Color:
-      break;
-    default:
-      return Err("fill is not a plain color");
   }
 
   if (!style->mStroke.kind.IsNone()) {
@@ -734,47 +742,65 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
     return Err("markers are not supported");
   }
 
-  if (!aDryRun) {
-    auto appUnitsPerDevPx = PresContext()->AppUnitsPerDevPixel();
-    float scale = (float)AppUnitsPerCSSPixel() / (float)appUnitsPerDevPx;
+  if (aDryRun) {
+    return Ok();
+  }
 
-    auto rect = simplePath.AsRect();
-    rect.Scale(scale);
+  auto appUnitsPerDevPx = PresContext()->AppUnitsPerDevPixel();
+  const CSSToLayoutDeviceScale cssToDev = PresContext()->CSSToDevPixelScale();
+  auto offset = LayoutDevicePoint::FromAppUnits(
+      aItem->ToReferenceFrame() - GetPosition(), appUnitsPerDevPx);
 
-    auto offset = LayoutDevicePoint::FromAppUnits(
-        aItem->ToReferenceFrame() - GetPosition(), appUnitsPerDevPx);
-    rect.MoveBy(offset.x, offset.y);
+  // Converts a rect from this frame's user space to device space relative to
+  // the reference frame.
+  auto toDevice = [&](const CSSRect& aRect) {
+    return wr::ToLayoutRect(aRect * cssToDev + offset);
+  };
 
-    auto wrRect = wr::ToLayoutRect(rect);
+  SVGContextPaint* contextPaint =
+      SVGContextPaint::GetContextPaint(GetContent());
 
-    SVGContextPaint* contextPaint =
-        SVGContextPaint::GetContextPaint(GetContent());
-    // At the moment this code path doesn't support strokes so it fine to
-    // combine the rectangle's opacity (which has to be applied on the result)
-    // of (filling + stroking) with the fill opacity.
+  // This code path doesn't support strokes so it is fine to combine the
+  // shape's opacity (which has to be applied on the result of filling and
+  // stroking) with the fill opacity.
+  float elemOpacity = 1.0f;
+  if (SVGUtils::CanOptimizeOpacity(this)) {
+    elemOpacity = StyleEffects()->mOpacity;
+  }
 
-    float elemOpacity = 1.0f;
-    if (SVGUtils::CanOptimizeOpacity(this)) {
-      elemOpacity = StyleEffects()->mOpacity;
-    }
+  float fillOpacity = SVGUtils::GetOpacity(style->mFillOpacity, contextPaint);
+  auto fillColor =
+      wr::ToColorF(ToDeviceColor(style->mFill.kind.AsColor().CalcColor(this)));
+  fillColor.a *= elemOpacity * fillOpacity;
 
-    float fillOpacity = SVGUtils::GetOpacity(style->mFillOpacity, contextPaint);
-    float opacity = elemOpacity * fillOpacity;
+  const bool backfaceVisible = !aItem->BackfaceIsHidden();
+  wr::LayoutRect wrRect = toDevice(shape.AsRect());
 
-    auto color = wr::ToColorF(
-        ToDeviceColor(StyleSVG()->mFill.kind.AsColor().CalcColor(this)));
-    color.a *= opacity;
-
-    // shape-rendering: crispEdges / optimizeSpeed disables anti-aliasing, the
-    // same way it does for the gfxContext path in Render().
-    const bool antialiased = SVGUtils::ToAntialiasMode(
-                                 style->mShapeRendering) != AntialiasMode::NONE;
-    aBuilder.PushRect(wrRect, wrRect, !aItem->BackfaceIsHidden(), antialiased,
-                      false, color);
+  if (shape.IsRect()) {
+    aBuilder.PushRect(wrRect, wrRect, backfaceVisible, ShouldAntiAlias(), false,
+                      fillColor);
+  } else {
+    aBuilder.PushRoundedRect(wrRect, wrRect, backfaceVisible,
+                             wr::ToLayoutSize(shape.Radii() * cssToDev),
+                             fillColor);
   }
 
   return Ok();
 }
+
+bool SVGGeometryFrame::HasCrispEdges() const {
+  switch (StyleSVG()->mShapeRendering) {
+    case StyleShapeRendering::Optimizespeed:
+    case StyleShapeRendering::Crispedges:
+      return true;
+    default:
+      return false;
+  }
+}
+
+// shape-rendering: crispEdges / optimizeSpeed disables anti-aliasing, the same
+// way it does for the gfxContext path in Render().
+bool SVGGeometryFrame::ShouldAntiAlias() const { return !HasCrispEdges(); }
 
 void SVGGeometryFrame::PaintMarkers(gfxContext& aContext,
                                     const gfxMatrix& aTransform,
