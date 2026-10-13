@@ -11,7 +11,6 @@ import {
   stripUnresolvedUrlTokens,
   UrlTokenizer,
 } from "moz-src:///browser/components/aiwindow/ui/modules/UrlTokenizer.sys.mjs";
-import { componentTypeName } from "moz-src:///browser/components/aiwindow/ui/modules/AITabUtils.mjs";
 
 const lazy = {};
 
@@ -1275,7 +1274,11 @@ export class AITab {
         return;
       }
       visited.add(id);
-      used.push(componentTypeName(comp));
+      used.push(
+        typeof comp.layout == "string"
+          ? `${comp.component}_${comp.layout}`
+          : comp.component
+      );
       for (const ref of [comp.header, comp.children].flat()) {
         visit(typeof ref == "string" ? ref : ref?.componentId);
       }
