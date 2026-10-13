@@ -246,6 +246,25 @@ def _poll(pipe, poll_interval=0.1):
         return True
 
 
+def _process_sampling_interval(poll_interval):
+    """Return the minimum interval, in seconds, between samples of the running
+    processes, or None if they shouldn't be sampled.
+
+    MOZ_PROCESS_SAMPLING sets that interval. Sampling processes is expensive
+    when there are many of them, so a larger interval trades the precision of
+    their start and end times for less overhead. 0 disables process sampling,
+    and a value that isn't a number samples them along with everything else.
+    """
+    value = os.environ.get("MOZ_PROCESS_SAMPLING")
+    if not value:
+        return None
+    try:
+        interval = float(value)
+    except ValueError:
+        return poll_interval
+    return interval if interval > 0 else None
+
+
 def _collect(pipe, poll_interval):
     """Collects system metrics.
 
@@ -254,7 +273,7 @@ def _collect(pipe, poll_interval):
     """
 
     processes = []
-    sample_processes = "MOZ_PROCESS_SAMPLING" in os.environ
+    process_sampling_interval = _process_sampling_interval(poll_interval)
 
     try:
         # Establish initial values.
@@ -272,12 +291,23 @@ def _collect(pipe, poll_interval):
         sleep_interval = poll_interval
 
         known_processes = dict()
+        last_process_sample = None
 
         def update_known_processes():
-            nonlocal known_processes
+            nonlocal known_processes, last_process_sample
 
-            if not sample_processes:
+            if process_sampling_interval is None:
                 return
+            now = time.monotonic()
+            # Polls are not evenly spaced, so allow for half a poll of slack
+            # to not skip polls when the interval is a multiple of it.
+            if (
+                last_process_sample is not None
+                and now - last_process_sample + poll_interval / 2
+                < process_sampling_interval
+            ):
+                return
+            last_process_sample = now
 
             updated_known_processes = dict()
             for p in psutil.process_iter():
