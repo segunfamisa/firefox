@@ -5,8 +5,8 @@
 #ifndef DOM_WEBAUTHN_AUTHENTICATOR_SRC_TRANSPORT_LINUX_HIDWRAPPER_H_
 #define DOM_WEBAUTHN_AUTHENTICATOR_SRC_TRANSPORT_LINUX_HIDWRAPPER_H_
 
-#include<sys/ioctl.h>
-#include<linux/hidraw.h>
+#include <linux/hidraw.h>
+#include <sys/ioctl.h>
 
 /* we define these constants to work around the fact that bindgen
    can't deal with the _IOR macro function. We let cpp deal with it
