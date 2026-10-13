@@ -3446,8 +3446,13 @@ WebRenderCommandsResult SVGTextFrame::CreateWebRenderCommands(
       if (drawMode == DrawMode(0)) {
         continue;
       }
-      MOZ_ASSERT(!(drawMode & DrawMode::GLYPH_STROKE),
-                 "ShouldRenderAsPath should have rejected strokes");
+      // GLYPH_STROKE can still be set here: it covers any stroke paint other
+      // than "none", including a stroke that paints nothing because its width
+      // or its opacity is zero. Those are the only strokes that get this far,
+      // since ShouldRenderAsPath sends the rest down the path rendering route
+      // which the checks above reject. nsTextFrame strokes glyphs only for
+      // -webkit-text-stroke, so an SVG stroke is ignored below, exactly as it
+      // is when the blob image path paints a zero width stroke.
 
       nscoord startEdge, endEdge;
       run.GetClipEdges(startEdge, endEdge);
