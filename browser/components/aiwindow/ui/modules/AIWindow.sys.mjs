@@ -1502,6 +1502,7 @@ export const AIWindow = {
       removable: true,
       showInPrivateBrowsing: false,
       onCreated: node => {
+        node.setAttribute("badged", "true");
         node.classList.add("subviewbutton-nav");
         node.setAttribute("aria-haspopup", "true");
         this._updateButtonVisibility(node);
