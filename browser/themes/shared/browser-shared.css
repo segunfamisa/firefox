@@ -739,6 +739,14 @@ toolbarpaletteitem > #personal-bookmarks > #PlacesToolbar,
   flex-wrap: wrap;
 }
 
+notification-message img.inline-icon {
+  vertical-align: middle;
+  /* stylelint-disable-next-line stylelint-plugin-mozilla/use-design-tokens */
+  max-height: 1lh;
+  -moz-context-properties: fill;
+  fill: currentColor;
+}
+
 .bookmark-item[cutting] {
   > .toolbarbutton-icon,
   > .menu-icon {
