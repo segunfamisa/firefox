@@ -3329,6 +3329,15 @@ WebRenderCommandsResult SVGTextFrame::CreateWebRenderCommands(
   if (std::abs(mLengthAdjustScaleFactor) < epsilon) {
     return Err("zero length adjust scale");
   }
+  if (GetWritingMode().IsVertical() &&
+      std::abs(mLengthAdjustScaleFactor - 1.0f) > epsilon) {
+    // lengthAdjust: spacingAndGlyphs scales only the inline axis, so the run
+    // transform is a non-uniform scale. Sideways vertical glyphs reach
+    // WebRender pre-transposed through the glyph flags, and WebRender applies
+    // the run transform after that transpose, which puts the scale on the
+    // glyph's cross axis.
+    return Err("length adjust scale on vertical text");
+  }
 
   nsPresContext* presContext = PresContext();
   const int32_t auPerDevPx = presContext->AppUnitsPerDevPixel();
