@@ -1334,13 +1334,27 @@ export class nsContextMenu {
   }
 
   initViewSourceItems() {
-    const showViewSourceItem = (id, check) => {
+    const getString = aName => {
+      const { bundle } = this.window.gViewSourceUtils.getPageActor(
+        this.browser
+      );
+      return bundle.GetStringFromName(aName);
+    };
+    const showViewSourceItem = (id, check, accesskey) => {
       const fullId = `context-viewsource-${id}`;
       this.showItem(fullId, onViewSource);
       if (!onViewSource) {
         return;
       }
       this.setItemAttr(fullId, "checked", check());
+      this.setItemAttr(fullId, "label", getString(`context_${id}_label`));
+      if (accesskey) {
+        this.setItemAttr(
+          fullId,
+          "accesskey",
+          getString(`context_${id}_accesskey`)
+        );
+      }
     };
 
     const onViewSource =
@@ -1348,7 +1362,7 @@ export class nsContextMenu {
         "view-source"
       );
 
-    showViewSourceItem("goToLine", () => false);
+    showViewSourceItem("goToLine", () => false, true);
     showViewSourceItem("wrapLongLines", () =>
       Services.prefs.getBoolPref("view_source.wrap_long_lines", false)
     );
