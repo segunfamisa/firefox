@@ -238,6 +238,11 @@ interface nsIX509CertDB : nsISupports {
 
   /*
    *  Decode a raw data presentation and instantiate an object in memory.
+   *  NB: This creates a so-called "temporary certificate", with no permanent
+   *  trust records in the NSS certificate DB. Attempting to change the trust
+   *  of the resulting certificate is not supported (so e.g. setCertTrust will
+   *  fail). If a permanent certificate is required, use addCertFromBase64
+   *  instead.
    *
    *  @param base64 The raw representation of a certificate,
    *                encoded as Base 64.
@@ -248,6 +253,10 @@ interface nsIX509CertDB : nsISupports {
 
   /*
    *  Decode a raw data presentation and instantiate an object in memory.
+   *  NB: This creates a so-called "temporary certificate", with no permanent
+   *  trust records in the NSS certificate DB. Attempting to change the trust
+   *  of the resulting certificate is not supported (so e.g. setCertTrust will
+   *  fail). If a permanent certificate is required, use addCert instead.
    *
    *  @param certDER The raw representation of a certificate,
    *                 encoded as raw DER.
