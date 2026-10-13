@@ -34,6 +34,15 @@ const TEST_CARD = {
   "cc-exp-year": 2030,
 };
 
+// 15 digits, so the mask this store rebuilds on read is wider than the number
+// the card was saved with. See MASKED_NUMBER_LENGTH.
+const TEST_CARD_AMEX = {
+  "cc-name": "Jane Roe",
+  "cc-number": "378282246310005",
+  "cc-exp-month": 12,
+  "cc-exp-year": 2031,
+};
+
 // What the form holds once it is filled: the same card, with the month padded
 // as autofill writes it.
 const EXPECTED_FILL = {
@@ -41,6 +50,13 @@ const EXPECTED_FILL = {
   "cc-number": TEST_CARD["cc-number"],
   "cc-exp-month": "04",
   "cc-exp-year": String(TEST_CARD["cc-exp-year"]),
+};
+
+const EXPECTED_FILL_AMEX = {
+  "cc-name": TEST_CARD_AMEX["cc-name"],
+  "cc-number": TEST_CARD_AMEX["cc-number"],
+  "cc-exp-month": "12",
+  "cc-exp-year": String(TEST_CARD_AMEX["cc-exp-year"]),
 };
 
 /**
@@ -65,13 +81,13 @@ async function switchTo(rust) {
  *
  * @returns {Promise<object>} The filled values, keyed by field id.
  */
-async function fillFromStorage() {
+async function fillFromStorage(expected = EXPECTED_FILL) {
   let filled;
   await BrowserTestUtils.withNewTab(CC_FORM_URL, async browser => {
     await openPopupOn(browser, "#cc-name");
     await BrowserTestUtils.synthesizeKey("VK_DOWN", {}, browser);
     await BrowserTestUtils.synthesizeKey("VK_RETURN", {}, browser);
-    await waitForAutofill(browser, "#cc-name", TEST_CARD["cc-name"]);
+    await waitForAutofill(browser, "#cc-name", expected["cc-name"]);
 
     filled = await SpecialPowers.spawn(browser, [], () =>
       Object.fromEntries(
@@ -130,6 +146,35 @@ add_task(async function test_a_migrated_card_fills_a_form() {
     await fillFromStorage(),
     EXPECTED_FILL,
     "the number the receiving store re-encrypted decrypts back to the card"
+  );
+
+  await removeAllRecords();
+});
+
+add_task(async function test_a_migrated_card_derives_its_read_fields() {
+  // This store keeps the name, the expiry parts and the last four digits, and
+  // derives the rest on read. A migrated card is where that shows: the number
+  // it was saved with is gone by the time anything reads it back, so the mask
+  // is rebuilt at a fixed width rather than the card's own.
+  await switchTo(false);
+  await setStorage(TEST_CARD_AMEX);
+  await switchTo(true);
+
+  const [stored] = await getCreditCards();
+  Assert.equal(
+    stored["cc-number"],
+    "\u2022".repeat(12) + "0005",
+    "the mask is rebuilt at a fixed width, not the 15 digits saved"
+  );
+  Assert.equal(stored["cc-given-name"], "Jane", "cc-given-name is derived");
+  Assert.equal(stored["cc-family-name"], "Roe", "cc-family-name is derived");
+  Assert.equal(stored["cc-exp"], "2031-12", "cc-exp is derived");
+  Assert.equal(stored["cc-type"], "amex", "cc-type came across the copy");
+
+  Assert.deepEqual(
+    await fillFromStorage(EXPECTED_FILL_AMEX),
+    EXPECTED_FILL_AMEX,
+    "and the number still fills, however the mask was rebuilt"
   );
 
   await removeAllRecords();
