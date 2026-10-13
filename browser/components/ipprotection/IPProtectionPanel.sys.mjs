@@ -58,8 +58,6 @@ const BANDWIDTH_WARNING_DISMISSED_PREF =
 const BANDWIDTH_RESET_DATE_PREF = "browser.ipProtection.bandwidthResetDate";
 const EGRESS_LOCATION_PREF = "browser.ipProtection.egressLocation";
 const USER_OPENED_PREF = "browser.ipProtection.everOpenedPanel";
-const LOCATION_BADGE_DISMISSED_PREF =
-  "browser.ipProtection.locationButtonBadgeDismissed";
 const UPGRADE_NOT_AVAILABLE_PREF = "browser.ipProtection.upgradeNotAvailable";
 
 XPCOMUtils.defineLazyPreferenceGetter(
@@ -151,8 +149,6 @@ export class IPProtectionPanel {
    *  An object containing the current and max usage
    * @property {boolean} isActivating
    *  True if the VPN service is in the process of connecting, else false.
-   * @property {boolean} showLocationButtonBadge
-   *  True if the "new" badge on the location selection button should be visible.
    * @property {boolean} isPremium
    * True if the current device has Firefox set as the default browser or the user has a Mozilla VPN subscription and/or unlimited bandwidth
    */
@@ -427,10 +423,6 @@ export class IPProtectionPanel {
       isActivating:
         lazy.IPPProxyManager.state === lazy.IPPProxyStates.ACTIVATING,
       isEnrolling: lazy.IPProtectionService.authProvider.isEnrolling,
-      showLocationButtonBadge: !Services.prefs.getBoolPref(
-        LOCATION_BADGE_DISMISSED_PREF,
-        false
-      ),
       isPremium: this.isPremium,
     };
 
@@ -670,11 +662,6 @@ export class IPProtectionPanel {
    * Disables updates to the panel.
    */
   hiding() {
-    if (this.state.showLocationButtonBadge) {
-      Services.prefs.setBoolPref(LOCATION_BADGE_DISMISSED_PREF, true);
-      this.state.showLocationButtonBadge = false;
-    }
-
     const mask = lazy.IPPOnboardingMessage.readPrefMask();
     const hasUsedSiteExceptions = !!(
       mask & ONBOARDING_PREF_FLAGS.EVER_USED_SITE_EXCEPTIONS
@@ -1338,10 +1325,6 @@ export class IPProtectionPanel {
     } else if (event.type == "IPPUsageHelper:StateChanged") {
       this.setState({ bandwidthWarning: this.#shouldShowBandwidthWarning() });
     } else if (event.type == "IPProtection:UserShowLocations") {
-      if (this.state.showLocationButtonBadge) {
-        Services.prefs.setBoolPref(LOCATION_BADGE_DISMISSED_PREF, true);
-        this.setState({ showLocationButtonBadge: false });
-      }
       Glean.ipprotection.locationSelectorButtonClicked.record();
       this.showLocationSelector(
         event.detail?.keyboardActivated,
