@@ -541,6 +541,7 @@ class BytecodeBufferOrSource {
   [[nodiscard]] bool getOrCreateBuffer(BytecodeBuffer* result) const {
     if (hasBuffer()) {
       *result = buffer();
+      return true;
     }
     return BytecodeBuffer::fromSource(source(), result);
   }
