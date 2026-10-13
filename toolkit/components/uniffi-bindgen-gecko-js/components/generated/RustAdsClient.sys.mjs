@@ -1461,7 +1461,7 @@ export class MozAdsRequestOptions {
         {
             blocks= [], 
             cachePolicy, 
-            flags= {}, 
+            flags= new Map(), 
             ohttp= false
         } = {
             blocks: undefined, 
