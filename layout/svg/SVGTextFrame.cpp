@@ -3360,12 +3360,24 @@ WebRenderCommandsResult SVGTextFrame::CreateWebRenderCommands(
     nsTextFrame* frame = run.mFrame;
     const nsStyleSVG* style = frame->StyleSVG();
 
-    bool paintSVGGlyphs;
-    if (ShouldRenderAsPath(frame, outerContextPaint, paintSVGGlyphs)) {
-      return Err("text is rendered as a path");
-    }
     if (!style->mFill.kind.IsNone() && !style->mFill.kind.IsColor()) {
       return Err("text fill is not a plain color");
+    }
+    bool paintSVGGlyphs;
+    if (ShouldRenderAsPath(frame, outerContextPaint, paintSVGGlyphs)) {
+      // ShouldRenderAsPath rejects translucent fills because Skia would
+      // double blend overlapping glyphs. WebRender text has the same behavior
+      // as HTML text with a translucent color, which is accepted here.
+      // Decorations are excluded: nsTextFrame paints them with the fill color
+      // but without fill-opacity.
+      bool onlyTranslucentFill =
+          StaticPrefs::gfx_webrender_svg_text_fill_opacity() &&
+          style->mFill.kind.IsColor() && !style->HasStroke() &&
+          !frame->StyleText()->HasTextShadow() &&
+          !frame->Style()->HasTextDecorationLines();
+      if (!onlyTranslucentFill) {
+        return Err("text is rendered as a path");
+      }
     }
     if (frame->StyleText()->HasTextShadow()) {
       return Err("text-shadow is not supported");
