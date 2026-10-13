@@ -883,4 +883,8 @@ async function addEmailCert() {
   });
 }
 
-window.addEventListener("load", LoadCerts);
+window.addEventListener("load", () => {
+  LoadCerts().then(() => {
+    Services.obs.notifyObservers(window, "psm:cert-manager-loaded");
+  });
+});
