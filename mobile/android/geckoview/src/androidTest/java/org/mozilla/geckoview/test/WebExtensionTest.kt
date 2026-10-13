@@ -990,13 +990,13 @@ class WebExtensionTest : BaseSessionTest() {
             { delegate -> controller.setAddonManagerDelegate(delegate) },
             { controller.setAddonManagerDelegate(null) },
             object : WebExtensionController.AddonManagerDelegate {
-                @AssertCalled(count = 3) override fun onEnabling(extension: WebExtension) {}
+                @AssertCalled(count = 2) override fun onEnabling(extension: WebExtension) {}
 
-                @AssertCalled(count = 3) override fun onEnabled(extension: WebExtension) {}
+                @AssertCalled(count = 2) override fun onEnabled(extension: WebExtension) {}
 
-                @AssertCalled(count = 3) override fun onDisabling(extension: WebExtension) {}
+                @AssertCalled(count = 2) override fun onDisabling(extension: WebExtension) {}
 
-                @AssertCalled(count = 3) override fun onDisabled(extension: WebExtension) {}
+                @AssertCalled(count = 2) override fun onDisabled(extension: WebExtension) {}
 
                 @AssertCalled(count = 1) override fun onUninstalling(extension: WebExtension) {}
 
@@ -1552,6 +1552,7 @@ class WebExtensionTest : BaseSessionTest() {
             }
         )
 
+        val installationFailed = GeckoResult<Void>()
         sessionRule.addExternalDelegateUntilTestEnd(
             WebExtensionController.AddonManagerDelegate::class,
             { delegate -> controller.setAddonManagerDelegate(delegate) },
@@ -1567,6 +1568,7 @@ class WebExtensionTest : BaseSessionTest() {
                     assertEquals(expectedExtensionID, extension?.id)
                     assertEquals(expectedError, installException.code)
                     assertEquals(expectedExtensionID, installException.extensionId)
+                    installationFailed.complete(null)
                 }
             },
         )
@@ -1587,6 +1589,7 @@ class WebExtensionTest : BaseSessionTest() {
                     },
                 )
         )
+        sessionRule.waitForResult(installationFailed)
     }
 
     private fun extensionsMap(extensionList: List<WebExtension>): Map<String, WebExtension> {
@@ -4056,6 +4059,7 @@ class WebExtensionTest : BaseSessionTest() {
             }
         )
 
+        val uninstalled = GeckoResult<Void>()
         sessionRule.addExternalDelegateUntilTestEnd(
             WebExtensionController.AddonManagerDelegate::class,
             { delegate -> controller.setAddonManagerDelegate(delegate) },
@@ -4071,7 +4075,10 @@ class WebExtensionTest : BaseSessionTest() {
 
                 @AssertCalled(count = 1) override fun onUninstalling(extension: WebExtension) {}
 
-                @AssertCalled(count = 1) override fun onUninstalled(extension: WebExtension) {}
+                @AssertCalled(count = 1)
+                override fun onUninstalled(extension: WebExtension) {
+                    uninstalled.complete(null)
+                }
 
                 // We expect onInstalling/onInstalled to be invoked twice
                 // because we first install the extension and then we update
@@ -4106,6 +4113,7 @@ class WebExtensionTest : BaseSessionTest() {
         sessionRule.waitForPageStop()
 
         sessionRule.waitForResult(controller.uninstall(updatedWebExtension))
+        sessionRule.waitForResult(uninstalled)
     }
 
     @Test

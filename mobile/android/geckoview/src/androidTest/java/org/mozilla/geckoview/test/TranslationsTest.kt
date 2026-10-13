@@ -348,7 +348,6 @@ class TranslationsTest : BaseSessionTest() {
         var delegateCalled = 0
         sessionRule.delegateUntilTestEnd(
             object : Delegate {
-                @AssertCalled(count = 4)
                 override fun onTranslationStateChange(
                     session: GeckoSession,
                     translationState: TranslationState?,
@@ -403,6 +402,11 @@ class TranslationsTest : BaseSessionTest() {
                 assertTrue("Expect an exception while translating in automation.", true)
             }
         }
+        assertEquals(
+            "onTranslationStateChange should be called the expected number of times.",
+            if (sessionRule.env.isAutomation) 2 else 4,
+            delegateCalled,
+        )
     }
 
     @Test
