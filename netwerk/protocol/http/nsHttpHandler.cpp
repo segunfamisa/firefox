@@ -3028,6 +3028,7 @@ void nsHttpHandler::SetHttpHandlerInitArgs(const HttpHandlerInitArgs& aArgs) {
   mCompatFirefox = aArgs.mCompatFirefox();
   mCompatDevice = aArgs.mCompatDevice();
   mDeviceModelId = aArgs.mDeviceModelId();
+  mUserAgentIsDirty = true;
 }
 
 void nsHttpHandler::SetDeviceModelId(const nsACString& aModelId) {
