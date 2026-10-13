@@ -18,6 +18,7 @@
 #include "mozilla/SVGContextPaint.h"
 #include "mozilla/SVGObserverUtils.h"
 #include "mozilla/SVGUtils.h"
+#include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_svg.h"
 #include "mozilla/dom/SVGGeometryElement.h"
 #include "mozilla/dom/SVGGraphicsElement.h"
@@ -722,8 +723,9 @@ WebRenderCommandsResult SVGGeometryFrame::CreateWebRenderCommands(
     return Err("stroke is not supported");
   }
 
-  if (StyleEffects()->HasMixBlendMode()) {
-    // FIXME: not implemented
+  // The blend itself is performed by the enclosing nsDisplayBlendMode item.
+  if (StyleEffects()->HasMixBlendMode() &&
+      !StaticPrefs::gfx_webrender_svg_shapes_blend()) {
     return Err("mix-blend-mode is not supported");
   }
 
