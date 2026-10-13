@@ -1262,7 +1262,7 @@ class DynamicToolbarTest : BaseSessionTest() {
         mainSession.waitForPageStop()
         mainSession.flushApzRepaints()
 
-        // Scroll to the bottom edge first.
+        // Scroll the buttons into view, but not to the bottom edge of the page to avoid bug 2076041.
         val scrollPromise =
             mainSession.evaluatePromiseJS(
                 """
@@ -1277,7 +1277,7 @@ class DynamicToolbarTest : BaseSessionTest() {
         mainSession.waitForRoundTrip()
         mainSession.evaluateJS(
             """
-            document.scrollingElement.scrollTo(0, document.scrollingElement.scrollHeight);
+            document.querySelector("#not-sticky").scrollIntoView({ behavior: 'instant' });
             """
                 .trimIndent()
         )
