@@ -19,6 +19,7 @@ import { UrlbarShared } from "chrome://browser/content/urlbar/UrlbarShared.mjs";
  * @import { BrowserSearchTelemetry } from "moz-src:///browser/components/search/BrowserSearchTelemetry.sys.mjs"
  * @import { UrlbarLoadRequest, LoadURLParams } from "chrome://browser/content/urlbar/UrlbarShared.mjs"
  * @import { UrlbarAutofillData } from "chrome://browser/content/urlbar/UrlbarResult.mjs"
+ * @import { Tabbrowser } from "moz-src:///browser/components/tabbrowser/Tabbrowser.sys.mjs"
  */
 
 /**
@@ -345,13 +346,17 @@ ${
   _enableAutofillPlaceholder = true;
 
   /**
+   * @typedef {ChromeWindow & {gBrowser: Tabbrowser}} BrowserWindow
+   */
+
+  /**
    * The browser window or null in a child process.
    *
    * For the addressbar and searchbar, this is the same as the global `window`.
    * For the smartbar, this is the browser window containing its content window.
    * For the newtab search bar, this is null.
    *
-   * @type {?ChromeWindow}
+   * @type {?BrowserWindow}
    */
   // @ts-expect-error bug 1957626
   browserWindow = window.browsingContext?.topChromeWindow ?? null;
@@ -977,6 +982,9 @@ ${
     this._suppressPrimaryAdjustment = false;
   }
 
+  /**
+   * @param {MozBrowser} browser
+   */
   saveSelectionStateForBrowser(browser) {
     let state = this.getBrowserState(browser);
     state.selection = {
@@ -991,6 +999,9 @@ ${
     };
   }
 
+  /**
+   * @param {MozBrowser} browser
+   */
   restoreSelectionStateForBrowser(browser) {
     // Address bar must be focused to untrim and for selection to make sense.
     this.focus();
@@ -1254,7 +1265,7 @@ ${
   /**
    * Function for tabs progress listener.
    *
-   * @param {nsIBrowser} browser
+   * @param {MozBrowser} browser
    * @param {nsIWebProgress} webProgress
    *   The nsIWebProgress instance that fired the notification.
    * @param {nsIRequest} request
@@ -3198,6 +3209,9 @@ ${
       ?.markAsUsed();
   }
 
+  /**
+   * @param {MozBrowser} browser
+   */
   getBrowserState(browser) {
     let state = this.#browserStates.get(browser);
     if (!state) {
@@ -5823,7 +5837,7 @@ ${
       options.userContextId = parseInt(
         this.browserWindow.gBrowser.selectedBrowser?.getAttribute(
           "usercontextid"
-        ) ?? 0
+        ) ?? "0"
       );
       options.tabGroup =
         this.browserWindow.gBrowser.selectedTab.group?.id ?? null;
@@ -6266,6 +6280,8 @@ ${
 
   /**
    * Tracks a state object per browser.
+   *
+   * @type {WeakMap<MozBrowser, object>}
    */
   #browserStates = new WeakMap();
 
