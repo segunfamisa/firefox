@@ -523,7 +523,7 @@ Register CacheRegisterAllocator::allocateRegister(MacroAssembler& masm) {
     masm.push(reg);
     stackPushed_ += sizeof(uintptr_t);
 
-    masm.propagateOOM(spilledRegs_.append(SpilledRegister(reg, stackPushed_)));
+    masm.propagateOOM(spilledRegs_.emplaceBack(reg, stackPushed_));
 
     availableRegs_.add(reg);
   }
@@ -559,7 +559,7 @@ void CacheRegisterAllocator::allocateFixedRegister(MacroAssembler& masm,
     masm.push(reg);
     stackPushed_ += sizeof(uintptr_t);
 
-    masm.propagateOOM(spilledRegs_.append(SpilledRegister(reg, stackPushed_)));
+    masm.propagateOOM(spilledRegs_.emplaceBack(reg, stackPushed_));
     currentOpRegs_.add(reg);
     return;
   }
