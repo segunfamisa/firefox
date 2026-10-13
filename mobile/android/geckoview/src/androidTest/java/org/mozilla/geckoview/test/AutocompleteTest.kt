@@ -1446,6 +1446,7 @@ class AutocompleteTest : BaseSessionTest() {
         val session2 = sessionRule.createOpenSession()
         session2.loadTestPath(FORMS3_HTML_PATH)
         session2.waitForPageStop()
+        waitForFill(session2, "#user1")
         session2.evaluateJS("document.querySelector('#pass1').value = '$pass2'")
         session2.evaluateJS("document.querySelector('#form1').submit()")
 
