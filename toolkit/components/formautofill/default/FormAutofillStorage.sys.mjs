@@ -13,6 +13,7 @@ import {
   CreditCardsBase,
   FormAutofillStorageBase,
 } from "resource://autofill/FormAutofillStorageBase.sys.mjs";
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import { XPCOMUtils } from "resource://gre/modules/XPCOMUtils.sys.mjs";
 
 const lazy = {};
@@ -24,6 +25,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   CreditCardStorageMigrator:
     "resource://autofill/AutofillStorageMigrator.sys.mjs",
   JSONFile: "resource://gre/modules/JSONFile.sys.mjs",
+  LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
   OSKeyStore: "resource://gre/modules/OSKeyStore.sys.mjs",
   Passports: "resource://autofill/PassportStorage.sys.mjs",
   RustAutofillAddressesAdapter:
@@ -82,12 +84,15 @@ ChromeUtils.defineLazyGetter(lazy, "RUST_MIGRATIONS", () => ({
     activePref: ADDRESS_RUST_ACTIVE_PREF,
     testPref: ADDRESS_RUST_MIGRATION_TEST_PREF,
     migrator: () => lazy.AddressStorageMigrator,
+    hasEncryption: false,
   },
   [lazy.AutofillDataTypes.CREDIT_CARD]: {
     enabledPref: CREDIT_CARD_RUST_ENABLED_PREF,
     activePref: CREDIT_CARD_RUST_ACTIVE_PREF,
     testPref: CREDIT_CARD_RUST_MIGRATION_TEST_PREF,
     migrator: () => lazy.CreditCardStorageMigrator,
+    // The card number: a copy needs a key at each end.
+    hasEncryption: true,
   },
 }));
 
@@ -143,6 +148,9 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
   // rather than copying over the same pair of stores at the same time.
   #addressSwitch = null;
   #creditCardSwitch = null;
+  // Whether the OS key store's unlock is observed, which it is while a credit
+  // card copy waits on it; see #maybeRunMigration.
+  #observingUnlock = false;
 
   /**
    * Settles which store serves addresses at startup, once the JSON store has
@@ -166,6 +174,13 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
   }
 
   observe(subject, topic, data) {
+    if (topic == lazy.OSKeyStore.UNLOCKED_TOPIC) {
+      // Observed only while a copy waits on it, and one unlock is enough.
+      Services.obs.removeObserver(this, topic);
+      this.#observingUnlock = false;
+      this.#queueCreditCardMigration();
+      return;
+    }
     if (topic != "nsPref:changed") {
       return;
     }
@@ -180,6 +195,10 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
     if (this.#initPromise) {
       Services.prefs.removeObserver(ADDRESS_RUST_ENABLED_PREF, this);
       Services.prefs.removeObserver(CREDIT_CARD_RUST_ENABLED_PREF, this);
+    }
+    if (this.#observingUnlock) {
+      this.#observingUnlock = false;
+      Services.obs.removeObserver(this, lazy.OSKeyStore.UNLOCKED_TOPIC);
     }
     return super._finalize();
   }
@@ -212,8 +231,9 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
   }
 
   /**
-   * Bring a collection to the store its prefs ask for. Run at startup and on
-   * a flip of the collection's enabled pref:
+   * Bring a collection to the store its prefs ask for. Run at startup, on a
+   * flip of the collection's enabled pref, and for credit cards when the OS
+   * key store unlocks after a deferred copy:
    *
    *  - rust.enabled set, Rust not serving: copy JSON into Rust and switch.
    *  - rust.enabled cleared, Rust serving: copy Rust back to JSON and switch.
@@ -229,9 +249,6 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
    * does not carry Rust's pending deletions, so one not yet uploaded can come
    * back on the next sync.
    *
-   * Credit card numbers are encrypted: CreditCardStorageMigrator checks both
-   * keys before copying and leaves a profile it cannot read where it is.
-   *
    * Nothing here catches: a throw at startup would reject initialize() and
    * leave autofill offering nothing. The migrator reports its own failures
    * and returns false instead.
@@ -240,7 +257,7 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
    *   AutofillDataTypes.CREDIT_CARD.
    */
   async #maybeRunMigration(dataType) {
-    const { enabledPref, activePref, testPref, migrator } =
+    const { enabledPref, activePref, testPref, migrator, hasEncryption } =
       lazy.RUST_MIGRATIONS[dataType];
     const { collectionName } = lazy.AutofillDataTypes.get(dataType);
     const Migrator = migrator();
@@ -255,15 +272,90 @@ export class FormAutofillStorage extends FormAutofillStorageBase {
       return;
     }
 
-    // The JSON store is the source of every copy but the one back, so the Rust
-    // store -- building its adapter starts opening autofill.db -- is reached
-    // only once this profile is known to want a copy.
+    // The JSON store is the source of every copy but the one back, so for a
+    // copy into Rust, the Rust store -- building its adapter starts opening
+    // autofill.db -- is reached only once this profile is known to want a copy
+    // and able to make it.
     const intoRust = !active;
     const json =
       dataType == lazy.AutofillDataTypes.CREDIT_CARD
         ? this.#jsonCreditCards()
         : this.#jsonAddresses();
     const source = intoRust ? json : Migrator.config.rustAdapter.getInstance();
+
+    // A copy of encrypted records needs a key at each end, and must not ask
+    // the user for either. The Rust store's key is NSS's, so with a primary
+    // password set nothing is copied into Rust, whether or not the token is
+    // unlocked. A copy back is still allowed, so turning the enabled pref off
+    // can return such a profile to JSON, but only while the token is unlocked:
+    // a locked one would read every record back without its values.
+    if (hasEncryption && lazy.LoginHelper.isPrimaryPasswordSet()) {
+      if (intoRust) {
+        lazy.logger.log(
+          `Not migrating ${collectionName}: a primary password is set.`
+        );
+        return;
+      }
+      if (lazy.RustAutofillStore.primaryPasswordLocked) {
+        lazy.logger.log(
+          `Deferring the ${collectionName} copy back: the token is locked.`
+        );
+        return;
+      }
+    }
+
+    // Only an encrypted collection needs to know whether there is anything to
+    // copy. The Rust store decrypts every record it reads, so for a copy back
+    // this read fails when its key cannot decrypt them -- the token was reset,
+    // or key4.db replaced. That leaves the profile where it is rather than
+    // throwing, which at startup would take autofill down with it.
+    let anyRecord;
+    if (hasEncryption) {
+      try {
+        [anyRecord] = await source.getAll({ prompt: false });
+      } catch (e) {
+        lazy.logger.error(
+          `Not migrating ${collectionName}: its records could not be read.`,
+          e
+        );
+        return;
+      }
+    }
+    // A profile with no records has nothing to decrypt and goes ahead.
+    if (anyRecord) {
+      // Wait until something else has unlocked the OS key store, so a copy
+      // into Rust never surfaces a keyring prompt of its own;
+      // OSKeyStore.UNLOCKED_TOPIC retries it. Windows does not wait: its key
+      // store reads the key through CredReadA, which shows no UI. A copy back
+      // does not wait either: while Rust serves, reads use NSS's key and
+      // nothing may unlock the OS key store, so the copy back would never run.
+      if (
+        intoRust &&
+        AppConstants.platform != "win" &&
+        !lazy.OSKeyStore.isLoggedIn
+      ) {
+        lazy.logger.log(
+          `Deferring the ${collectionName} migration to an unlock.`
+        );
+        if (!this.#observingUnlock) {
+          Services.obs.addObserver(this, lazy.OSKeyStore.UNLOCKED_TOPIC);
+          this.#observingUnlock = true;
+        }
+        return;
+      }
+      // Another key store operation is in flight, possibly a dialog of the
+      // user's that the copy would otherwise share. Asking now hands back that
+      // operation rather than starting one, so retry once it settles.
+      if (lazy.OSKeyStore.isUIBusy) {
+        lazy.logger.log(
+          `Deferring the ${collectionName} migration behind the key store.`
+        );
+        lazy.OSKeyStore.ensureLoggedIn(false).then(() =>
+          this.#queueCreditCardMigration()
+        );
+        return;
+      }
+    }
 
     const copy = new Migrator(
       source,
