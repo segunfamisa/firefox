@@ -1676,7 +1676,6 @@ pub mod test {
             Ok(())
         }
 
-        #[cfg(not(feature = "crypto_dummy"))]
         mod requires_crypto {
             use super::*;
 

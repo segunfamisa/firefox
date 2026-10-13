@@ -14,25 +14,8 @@ use serde_bytes::ByteBuf;
 use std::convert::TryFrom;
 use std::fmt;
 
-#[cfg(feature = "crypto_nss")]
 mod nss;
-#[cfg(feature = "crypto_nss")]
 use nss as backend;
-
-#[cfg(feature = "crypto_openssl")]
-mod openssl;
-#[cfg(feature = "crypto_openssl")]
-use self::openssl as backend;
-
-#[cfg(feature = "crypto_rust")]
-mod rustcrypto;
-#[cfg(feature = "crypto_rust")]
-use rustcrypto as backend;
-
-#[cfg(feature = "crypto_dummy")]
-mod dummy;
-#[cfg(feature = "crypto_dummy")]
-use dummy as backend;
 
 use backend::{
     decrypt_aes_256_cbc_no_pad, ecdhe_p256_raw, encrypt_aes_256_cbc_no_pad, gen_p256, hmac_sha256,
@@ -1192,11 +1175,10 @@ pub fn parse_u2f_der_certificate(data: &[u8]) -> Result<U2FRegisterAnswer<'_>, C
     })
 }
 
-#[cfg(all(test, not(feature = "crypto_dummy")))]
+#[cfg(test)]
 mod test {
     use std::convert::TryFrom;
 
-    #[cfg(feature = "crypto_nss")]
     use super::backend::{ecdsa_p256_sha256_sign_raw, test_ecdsa_p256_sha256_verify_raw};
     use super::{
         backend::hmac_sha256, backend::sha256, backend::test_ecdh_p256_raw, COSEAlgorithm, COSEKey,
@@ -1636,7 +1618,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "crypto_nss")]
     fn test_sign() {
         let (good_private, good_public) =
             COSEKey::generate(COSEAlgorithm::ES256).expect("could not generate a key pair");
