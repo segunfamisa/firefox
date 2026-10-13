@@ -2037,7 +2037,6 @@ class WebExtensionTest : BaseSessionTest() {
     // - Verify that close request came from right extension and targeted session
     @Test
     fun testSetTabActive() {
-        val onCloseRequestResult = GeckoResult<Void>()
         val tabsExtension = sessionRule.waitForResult(controller.installBuiltIn(TABS_ACTIVATE_REMOVE_BACKGROUND))
         val newTabSession = sessionRule.createOpenSession(mainSession.settings)
 
@@ -2046,11 +2045,10 @@ class WebExtensionTest : BaseSessionTest() {
             { delegate -> newTabSession.webExtensionController.setTabDelegate(tabsExtension, delegate) },
             { newTabSession.webExtensionController.setTabDelegate(tabsExtension, null) },
             object : WebExtension.SessionTabDelegate {
-
+                @AssertCalled(count = 1)
                 override fun onCloseTab(source: WebExtension?, session: GeckoSession): GeckoResult<AllowOrDeny> {
                     assertEquals(tabsExtension.id, source?.id)
                     assertEquals(newTabSession, session)
-                    onCloseRequestResult.complete(null)
                     return GeckoResult.allow()
                 }
             },
@@ -2059,7 +2057,7 @@ class WebExtensionTest : BaseSessionTest() {
         controller.setTabActive(mainSession, false)
         controller.setTabActive(newTabSession, true)
 
-        sessionRule.waitForResult(onCloseRequestResult)
+        sessionRule.waitUntilCalled(WebExtension.SessionTabDelegate::class, "onCloseTab")
         sessionRule.waitForResult(controller.uninstall(tabsExtension))
     }
 
@@ -2762,7 +2760,6 @@ class WebExtensionTest : BaseSessionTest() {
     // - Verify that request targets previously created GeckoSession
     @Test
     fun testBrowserTabsRemove() {
-        val onCloseRequestResult = GeckoResult<Void>()
         val existingSession = sessionRule.createOpenSession()
 
         existingSession.loadTestPath("$HELLO_HTML_PATH?tabToClose")
@@ -2775,9 +2772,9 @@ class WebExtensionTest : BaseSessionTest() {
             { delegate -> existingSession.webExtensionController.setTabDelegate(tabsExtension, delegate) },
             { existingSession.webExtensionController.setTabDelegate(tabsExtension, null) },
             object : WebExtension.SessionTabDelegate {
+                @AssertCalled(count = 1)
                 override fun onCloseTab(source: WebExtension?, session: GeckoSession): GeckoResult<AllowOrDeny> {
                     assertEquals(existingSession, session)
-                    onCloseRequestResult.complete(null)
                     return GeckoResult.allow()
                 }
             },
@@ -2794,7 +2791,7 @@ class WebExtensionTest : BaseSessionTest() {
         )
         sessionRule.waitForResult(portResult).postMessage(JSONObject())
 
-        sessionRule.waitForResult(onCloseRequestResult)
+        sessionRule.waitUntilCalled(WebExtension.SessionTabDelegate::class, "onCloseTab")
         sessionRule.waitForResult(controller.uninstall(tabsExtension))
     }
 

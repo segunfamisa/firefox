@@ -79,13 +79,9 @@ class TranslationsTest : BaseSessionTest() {
         mainSession.loadTestPath(TRANSLATIONS_ES)
         mainSession.waitForPageStop()
 
-        val handled = GeckoResult<Void>()
         sessionRule.delegateUntilTestEnd(
             object : Delegate {
-                @AssertCalled(count = 1)
-                override fun onExpectedTranslate(session: GeckoSession) {
-                    handled.complete(null)
-                }
+                @AssertCalled(count = 1) override fun onExpectedTranslate(session: GeckoSession) {}
             }
         )
         val expectedTranslateEvent =
@@ -110,7 +106,7 @@ class TranslationsTest : BaseSessionTest() {
                     .trimIndent()
             )
         mainSession.triggerLanguageStateChange(expectedTranslateEvent)
-        sessionRule.waitForResult(handled)
+        mainSession.waitUntilCalled(Delegate::class, "onExpectedTranslate")
     }
 
     @Test
@@ -118,18 +114,14 @@ class TranslationsTest : BaseSessionTest() {
         mainSession.loadTestPath(TRANSLATIONS_ES)
         mainSession.waitForPageStop()
 
-        val handled = GeckoResult<Void>()
         sessionRule.delegateUntilTestEnd(
             object : Delegate {
-                @AssertCalled(count = 1)
-                override fun onOfferTranslate(session: GeckoSession) {
-                    handled.complete(null)
-                }
+                @AssertCalled(count = 1) override fun onOfferTranslate(session: GeckoSession) {}
             }
         )
 
         mainSession.triggerTranslationsOffer()
-        sessionRule.waitForResult(handled)
+        mainSession.waitUntilCalled(Delegate::class, "onOfferTranslate")
     }
 
     @Test
@@ -868,7 +860,6 @@ class TranslationsTest : BaseSessionTest() {
         mainSession.loadTestPath(TRANSLATIONS_ES)
         mainSession.waitForPageStop()
 
-        val handled = GeckoResult<Void>()
         var delegateCalled = 0
         sessionRule.delegateUntilTestEnd(
             object : Delegate {
@@ -888,7 +879,6 @@ class TranslationsTest : BaseSessionTest() {
                             "After a translation, the DOM should be visibly changed.",
                             translationState!!.hasVisibleChange,
                         )
-                        handled.complete(null)
                     }
                 }
             }
@@ -938,7 +928,15 @@ class TranslationsTest : BaseSessionTest() {
                     .trimIndent()
             )
         mainSession.triggerLanguageStateChange(translated)
-        sessionRule.waitForResult(handled)
+        mainSession.waitUntilCalled(
+            object : Delegate {
+                @AssertCalled(count = 2)
+                override fun onTranslationStateChange(
+                    session: GeckoSession,
+                    translationState: TranslationState?,
+                ) {}
+            }
+        )
     }
 
     @Test
@@ -1003,7 +1001,6 @@ class TranslationsTest : BaseSessionTest() {
         mainSession.loadTestPath(TRANSLATIONS_ES)
         mainSession.waitForPageStop()
 
-        val handled = GeckoResult<Void>()
         sessionRule.delegateUntilTestEnd(
             object : Delegate {
                 @AssertCalled(count = 1)
@@ -1049,7 +1046,6 @@ class TranslationsTest : BaseSessionTest() {
                         true,
                         translationState.isEngineReady,
                     )
-                    handled.complete(null)
                 }
             }
         )
@@ -1076,6 +1072,6 @@ class TranslationsTest : BaseSessionTest() {
                     .trimIndent()
             )
         mainSession.triggerLanguageStateChange(translated)
-        sessionRule.waitForResult(handled)
+        mainSession.waitUntilCalled(Delegate::class, "onTranslationStateChange")
     }
 }
