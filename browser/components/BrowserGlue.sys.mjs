@@ -36,6 +36,7 @@ ChromeUtils.defineESModuleGetters(lazy, {
   ExtensionsUI: "resource:///modules/ExtensionsUI.sys.mjs",
   FormAutofillUtils: "resource://gre/modules/shared/FormAutofillUtils.sys.mjs",
   Interactions: "moz-src:///browser/components/places/Interactions.sys.mjs",
+  LaunchOnLogin: "resource://gre/modules/LaunchOnLogin.sys.mjs",
   LoginBreaches:
     "moz-src:///browser/components/aboutlogins/LoginBreaches.sys.mjs",
   LoginHelper: "resource://gre/modules/LoginHelper.sys.mjs",
@@ -329,6 +330,9 @@ BrowserGlue.prototype = {
           "os-autostart",
           false
         );
+        if (lazy.LaunchOnLogin.isSupported()) {
+          lazy.StartupOSIntegration.checkForLaunchOnLogin();
+        }
         break;
       }
     }
