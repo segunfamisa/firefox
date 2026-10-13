@@ -1636,6 +1636,12 @@ static bool AppendFracNumberToStringBuilder(StringBuilder& sb, double d) {
 #endif
 
   static constexpr size_t maxSize = JS::MaximumNumberToStringLength;
+  if (sb.spareCapacity() < maxSize) {
+      // Fall back to the slow path if this path would reallocate
+      ToCStringBuf buf;
+      size_t len = FracNumberToCString(&buf, d);
+      return sb.append(buf.sbuf, len);
+  }
   if (!sb.growByUninitialized(maxSize)) {
     return false;
   }
