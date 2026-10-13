@@ -5,7 +5,7 @@
 import { stubGlobals } from "test/jest/test-utils";
 
 describe("SponsoredTopSitesScoreProvider", () => {
-  let SponsoredTopSitesScoreProvider;
+  let _SponsoredTopSitesScoreProvider;
   let restoreChromeUtils;
   let restoreGlobals;
   let rsFactory;
@@ -14,6 +14,7 @@ describe("SponsoredTopSitesScoreProvider", () => {
   let cacheStore;
   let prefStore;
   let getFlags;
+  let logConsole;
   let provider;
 
   const PREF_LAST_TIME =
@@ -27,9 +28,11 @@ describe("SponsoredTopSitesScoreProvider", () => {
           return globalThis;
         },
         importESModule: () => globalThis,
+        // Leave lazy getters unset so they resolve to globals stubbed per test.
+        defineLazyGetter: () => {},
       },
     });
-    ({ SponsoredTopSitesScoreProvider } =
+    ({ _SponsoredTopSitesScoreProvider } =
       await import("lib/SponsoredTopSitesScoreProvider/SponsoredTopSitesScoreProvider.mjs"));
   });
 
@@ -47,6 +50,7 @@ describe("SponsoredTopSitesScoreProvider", () => {
     cacheStore = {};
     prefStore = {};
     getFlags = jest.fn().mockReturnValue({});
+    logConsole = { debug: jest.fn() };
     restoreGlobals = stubGlobals({
       RemoteSettings: rsFactory,
       Services: {
@@ -73,11 +77,14 @@ describe("SponsoredTopSitesScoreProvider", () => {
       NewTabUtils: {
         activityStreamProvider: { executePlacesQuery },
       },
+      logConsole,
     });
-    provider = new SponsoredTopSitesScoreProvider(getFlags);
+    provider = new _SponsoredTopSitesScoreProvider();
+    provider.init(getFlags);
   });
 
   afterEach(() => {
+    provider.uninit();
     restoreGlobals();
     jest.useRealTimers();
   });
@@ -99,38 +106,100 @@ describe("SponsoredTopSitesScoreProvider", () => {
   };
 
   it("constructs with no scores", async () => {
-    expect(provider).toBeInstanceOf(SponsoredTopSitesScoreProvider);
+    expect(provider).toBeInstanceOf(_SponsoredTopSitesScoreProvider);
     expect(await provider.getScores()).toEqual({});
   });
 
   describe("#init", () => {
-    it("creates the Remote Settings client and starts the refresh timer", async () => {
-      getFlags.mockReturnValue({ [RECORD_ID]: true });
-      rsClient.get.mockResolvedValue([{ id: RECORD_ID }]);
+    // Start from a provider that has not been initialized yet.
+    beforeEach(() => {
+      provider.uninit();
+      provider = new _SponsoredTopSitesScoreProvider();
+      rsFactory.mockClear();
+    });
 
-      await provider.init();
+    it("creates the Remote Settings client without refreshing the scores", () => {
+      getFlags.mockReturnValue({ [RECORD_ID]: true });
+      rsClient.get.mockResolvedValue([VALID_RECORD]);
+
+      provider.init(getFlags);
 
       expect(rsFactory).toHaveBeenCalledWith(
         "newtab-sponsored-topsites-scoring"
       );
-      expect(provider._refreshTimer).not.toBeNull();
+      expect(rsClient.get).not.toHaveBeenCalled();
     });
 
     it("restores persisted scores from the cache", async () => {
       cacheStore.scores = { "example.com": 5 };
-      jest
-        .spyOn(provider, "_getLastReleaseTime")
-        .mockReturnValue(Math.round(Date.now() / 1000));
 
-      await provider.init();
+      provider.init(getFlags);
 
       expect(await provider.getScores()).toEqual({ "example.com": 5 });
     });
   });
 
+  describe("#getScores", () => {
+    it("returns the cached scores and starts a background refresh", async () => {
+      cacheStore.scores = { "example.com": 5 };
+      const refreshScores = jest
+        .spyOn(provider, "_refreshScores")
+        .mockResolvedValue();
+
+      expect(await provider.getScores()).toEqual({ "example.com": 5 });
+      expect(refreshScores).toHaveBeenCalled();
+    });
+
+    it("does not start a refresh while one is still running", async () => {
+      let finishRefresh;
+      const refreshScores = jest
+        .spyOn(provider, "_refreshScores")
+        .mockReturnValue(new Promise(resolve => (finishRefresh = resolve)));
+
+      await provider.getScores();
+      await provider.getScores();
+      expect(refreshScores).toHaveBeenCalledTimes(1);
+
+      finishRefresh();
+      await provider._refreshPromise;
+      await provider.getScores();
+      expect(refreshScores).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not refresh after uninit", async () => {
+      const refreshScores = jest.spyOn(provider, "_refreshScores");
+      provider.uninit();
+
+      await provider.getScores();
+
+      expect(refreshScores).not.toHaveBeenCalled();
+    });
+
+    it("logs refresh errors instead of throwing", async () => {
+      const error = new Error("refresh failed");
+      jest.spyOn(provider, "_refreshScores").mockRejectedValue(error);
+
+      await expect(provider.getScores()).resolves.toEqual({});
+      await Promise.resolve();
+      expect(logConsole.debug).toHaveBeenCalledWith(expect.any(String), error);
+    });
+  });
+
   describe("#_refreshScores", () => {
-    beforeEach(() => {
-      provider._rs = rsClient;
+    it("clears stale scores when there is no config", async () => {
+      cacheStore.scores = { "example.com": 5 };
+
+      await provider._refreshScores();
+
+      expect(cacheStore.scores).toEqual({});
+    });
+
+    it("does not write the cache when there is no config and no scores", async () => {
+      const setScores = jest.spyOn(provider, "_setScores");
+
+      await provider._refreshScores();
+
+      expect(setScores).not.toHaveBeenCalled();
     });
 
     it("persists the scores and records the release time", async () => {
@@ -232,13 +301,9 @@ describe("SponsoredTopSitesScoreProvider", () => {
   });
 
   describe("#uninit", () => {
-    it("clears the timer and client", async () => {
-      getFlags.mockReturnValue({ [RECORD_ID]: true });
-      await provider.init();
-
+    it("releases the Remote Settings client", () => {
       provider.uninit();
 
-      expect(provider._refreshTimer).toBeNull();
       expect(provider._rs).toBeNull();
     });
   });
@@ -268,10 +333,6 @@ describe("SponsoredTopSitesScoreProvider", () => {
   });
 
   describe("#_loadConfig", () => {
-    beforeEach(() => {
-      provider._rs = rsClient;
-    });
-
     it("returns the record matching the enabled flag with hundredths converted", async () => {
       getFlags.mockReturnValue({ [RECORD_ID]: true });
       rsClient.get.mockResolvedValue([VALID_RECORD]);

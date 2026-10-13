@@ -13,14 +13,22 @@ ChromeUtils.defineESModuleGetters(lazy, {
   PlacesUtils: "resource://gre/modules/PlacesUtils.sys.mjs",
   NewTabUtils: "resource://gre/modules/NewTabUtils.sys.mjs",
   RemoteSettings: "resource://services-settings/remote-settings.sys.mjs",
-  clearInterval: "resource://gre/modules/Timer.sys.mjs",
-  setInterval: "resource://gre/modules/Timer.sys.mjs",
+});
+
+const PREF_LOG =
+  "browser.newtabpage.activity-stream.sponsoredTopSitesScoring.log";
+
+ChromeUtils.defineLazyGetter(lazy, "logConsole", function () {
+  return console.createInstance({
+    prefix: "SponsoredTopSitesScoreProvider",
+    maxLogLevel: Services.prefs.getBoolPref(PREF_LOG, false) ? "Debug" : "Warn",
+  });
 });
 
 // Microseconds per day to match on visit_date
 const US_PER_DAY = 24 * 60 * 60 * 1000 * 1000;
 
-// How often scores are recomputed in milliseconds (24 hours).
+// The minimum time between score recomputes in milliseconds (24 hours).
 const RELEASE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const REMOTE_SETTINGS_COLLECTION = "newtab-sponsored-topsites-scoring";
 
@@ -46,52 +54,41 @@ XPCOMUtils.defineLazyPreferenceGetter(
   0
 );
 
-export class SponsoredTopSitesScoreProvider {
-  /**
-   * @param {Function} getFlags Returns the current adsBackend flags for selecting
-   *  a configuration record through remote settings.
-   */
-  constructor(getFlags) {
-    this._getFlags = getFlags;
-    this._refreshTimer = null;
-    this._rs = null;
-    this._cache = new lazy.PersistentCache(CACHE_KEY, false);
-  }
+export class _SponsoredTopSitesScoreProvider {
+  _getFlags = null;
+  _rs = null;
+  _cache = null;
+  _refreshPromise = null;
 
   /**
-   * Starts the scoring. This creates the Remote Settings client, schedules a
-   * periodic refresh, and loads the first set of scores.
+   * Starts the scoring. This creates the cache and Remote Settings client.
    *
-   * @returns {Promise<void>} Resolves once the initial refresh completes.
+   * @param {Function} getFlags Returns the current adsBackend flags for
+   *  selecting a configuration record through remote settings.
    */
-  async init() {
+  init(getFlags) {
+    this._getFlags = getFlags;
+    if (!this._cache) {
+      this._cache = new lazy.PersistentCache(CACHE_KEY, false);
+    }
     if (!this._rs) {
       this._rs = lazy.RemoteSettings(REMOTE_SETTINGS_COLLECTION);
     }
-    if (!this._refreshTimer) {
-      this._refreshTimer = lazy.setInterval(
-        () => this._refreshScores(),
-        RELEASE_INTERVAL_MS
-      );
-    }
-    await this._refreshScores();
   }
 
   /**
-   * Stops the scoring. This cancels the refresh timer and clears any calculated
-   * scores. Invoke this when scoring is disabled or the consumer is uninitializing.
+   * Stops the scoring. This releases the Remote Settings client. Persisted
+   * scores stay in the cache for the next init.
+   * Invoke this when scoring is disabled or the consumer is uninitializing.
    */
   uninit() {
-    if (this._refreshTimer) {
-      lazy.clearInterval(this._refreshTimer);
-      this._refreshTimer = null;
-    }
     this._rs = null;
+    this._getFlags = null;
   }
 
   /**
-   * Load any active config and update the cached scores. Resets the scores when
-   * no config exists.
+   * Load any active config and update the cached scores. Clears existing
+   * scores when no config exists.
    *
    * @returns {Promise<void>} Resolves once the cached scores are updated.
    */
@@ -104,7 +101,10 @@ export class SponsoredTopSitesScoreProvider {
 
     const config = await this._loadConfig();
     if (!config) {
-      await this._setScores({});
+      const cachedScores = await this._cache.get(SCORES_CACHE_KEY);
+      if (cachedScores && Object.keys(cachedScores).length) {
+        await this._setScores({});
+      }
       return;
     }
 
@@ -209,12 +209,21 @@ export class SponsoredTopSitesScoreProvider {
   }
 
   /**
-   * Get the currently calculated scores from the cache.
+   * Returns the currently calculated scores from the cache and starts a
+   * background refresh to recompute the scores once a release interval has elapsed.
    *
    * @returns {Promise<object>} A map of scores.
    */
   async getScores() {
-    return (await this._cache.get(SCORES_CACHE_KEY)) ?? {};
+    const scores = (await this._cache?.get(SCORES_CACHE_KEY)) ?? {};
+    if (this._rs && !this._refreshPromise) {
+      this._refreshPromise = this._refreshScores()
+        .catch(e => lazy.logConsole.debug("Refresh failed", e))
+        .finally(() => {
+          this._refreshPromise = null;
+        });
+    }
+    return scores;
   }
 
   /**
@@ -527,3 +536,6 @@ export class SponsoredTopSitesScoreProvider {
     return match;
   }
 }
+
+export const SponsoredTopSitesScoreProvider =
+  new _SponsoredTopSitesScoreProvider();
