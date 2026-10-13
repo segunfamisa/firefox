@@ -20,6 +20,7 @@
 #include "mozilla/SVGGeometryFrame.h"
 #include "mozilla/SVGImageFrame.h"
 #include "mozilla/SVGTextFrame.h"
+#include "mozilla/SVGUtils.h"
 #include "mozilla/StaticPrefs_gfx.h"
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/UniquePtr.h"
@@ -1310,6 +1311,13 @@ static ItemActivity IsItemProbablyActive(
         auto activity =
             HasActiveChildren(*aItem->GetChildren(), aBuilder, aResources, aSc,
                               aManager, aDisplayListBuilder, aUniformlyScaled);
+        // A clip that WebRender can express natively costs nothing, so the
+        // children decide.
+        if (StaticPrefs::gfx_webrender_svg_mask_propagates_activity() &&
+            SVGUtils::DetermineMaskUsage(aItem->Frame(), false)
+                .IsSimpleClipShape()) {
+          return activity;
+        }
         // The mask is painted and uploaded as an image either way, so a child
         // that merely could be active is not worth the extra layers. A child
         // that should be active is: any change inside an inactive masked group
