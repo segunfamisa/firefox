@@ -88,7 +88,6 @@
 #include "jsapi.h"
 #include "jsfriendapi.h"
 #include "mozilla/Likely.h"
-#include "mozilla/LookAndFeel.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/SchedulerGroup.h"
 #include "mozilla/SpinEventLoopUntil.h"
@@ -3968,11 +3967,6 @@ struct FullscreenTransitionDuration {
 
 static void GetFullscreenTransitionDuration(
     bool aEnterFullscreen, FullscreenTransitionDuration* aDuration) {
-  if (LookAndFeel::GetInt(LookAndFeel::IntID::PrefersReducedMotion)) {
-    MOZ_ASSERT(aDuration->IsSuppressed());
-    return;
-  }
-
   const char* pref = aEnterFullscreen
                          ? "full-screen-api.transition-duration.enter"
                          : "full-screen-api.transition-duration.leave";
