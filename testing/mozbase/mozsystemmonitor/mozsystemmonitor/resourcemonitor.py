@@ -274,6 +274,9 @@ def _collect(pipe, poll_interval):
 
     processes = []
     process_sampling_interval = _process_sampling_interval(poll_interval)
+    known_processes = dict()
+    # Processes that were already running when monitoring started.
+    initial_processes = set()
 
     try:
         # Establish initial values.
@@ -290,7 +293,6 @@ def _collect(pipe, poll_interval):
 
         sleep_interval = poll_interval
 
-        known_processes = dict()
         last_process_sample = None
 
         def update_known_processes():
@@ -352,6 +354,9 @@ def _collect(pipe, poll_interval):
             known_processes = updated_known_processes
 
         update_known_processes()
+        initial_processes = {
+            (pid, create_time) for pid, (create_time, _, _) in known_processes.items()
+        }
 
         while not _poll(pipe, poll_interval=sleep_interval):
             io = get_disk_io_counters()
@@ -408,6 +413,13 @@ def _collect(pipe, poll_interval):
         warnings.warn("_collect failed: %s" % e)
 
     finally:
+        # Record the processes that started while monitoring and are still
+        # running.
+        stop_time = time.time()
+        for pid, (create_time, cmd, ppid) in known_processes.items():
+            if (pid, create_time) not in initial_processes:
+                processes.append((pid, create_time, stop_time, cmd, ppid))
+
         for pid, create_time, end_time, cmd, ppid in processes:
             if len(cmd) > 0:
                 cmd[0] = os.path.basename(cmd[0])

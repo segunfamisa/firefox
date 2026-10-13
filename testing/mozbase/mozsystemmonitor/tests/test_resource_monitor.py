@@ -1493,5 +1493,31 @@ def test_process_sampling_with_interval():
     assert any("time.sleep(2)" in cmd for cmd in cmds), cmds
 
 
+@pytest.mark.skipif(psutil is None, reason="Resource monitor requires psutil.")
+def test_process_sampling_still_running():
+    sleep = [sys.executable, "-c", "import time; time.sleep(60)"]
+    before = subprocess.Popen(sleep + ["before"])
+    try:
+        with mock.patch.dict(os.environ, {"MOZ_PROCESS_SAMPLING": "0.1"}):
+            monitor = SystemResourceMonitor(poll_interval=0.1)
+            monitor.start()
+            # Let the monitor take its first sample, which is what it
+            # considers to be running before it started.
+            time.sleep(0.5)
+            during = subprocess.Popen(sleep + ["during"])
+            try:
+                time.sleep(1)
+                monitor.stop()
+            finally:
+                during.kill()
+                during.wait()
+    finally:
+        before.kill()
+        before.wait()
+    cmds = [cmd for pid, start, end, cmd, ppid in monitor.processes]
+    assert any(cmd.endswith(" during") for cmd in cmds), cmds
+    assert not any(cmd.endswith(" before") for cmd in cmds), cmds
+
+
 if __name__ == "__main__":
     mozunit.main()
