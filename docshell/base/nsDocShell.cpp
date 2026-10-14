@@ -12536,14 +12536,6 @@ nsresult nsDocShell::OnLinkClickSync(nsIContent* aContent,
       // BC.
       loadType = GetLoadTypeForFormSubmission(GetBrowsingContext(), aLoadState);
     }
-  } else {
-    // Link click can be triggered inside an onload handler, and we don't want
-    // to add history entry in this case.
-    bool inOnLoadHandler = false;
-    GetIsExecutingOnLoadHandler(&inOnLoadHandler);
-    if (inOnLoadHandler) {
-      loadType = LOAD_NORMAL_REPLACE;
-    }
   }
 
   RefPtr referrerInfo = elementCanHaveNoopener
