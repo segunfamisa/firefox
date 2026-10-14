@@ -436,6 +436,8 @@ module.exports = {
         "layout/**",
         // Testing does not use design tokens
         "testing/**",
+        "**/test/**",
+        "**/tests/**",
         // UA Widgets should not use design tokens
         "toolkit/themes/shared/colorpicker-common.css",
         "toolkit/themes/shared/colorpicker.css",
