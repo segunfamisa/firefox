@@ -8,7 +8,6 @@
 #include "ARIAGridAccessible.h"
 #include "ARIAMap.h"
 #include "ApplicationAccessibleWrap.h"
-#include "CssAltContent.h"
 #include "DocAccessible-inl.h"
 #include "DocAccessibleChild.h"
 #include "FocusManager.h"
@@ -29,6 +28,7 @@
 #include "nsArrayUtils.h"
 #include "nsAttrName.h"
 #include "nsCRT.h"
+#include "nsCoreUtils.h"
 #include "nsDOMTokenList.h"
 #include "nsEventShell.h"
 #include "nsGkAtoms.h"
@@ -260,7 +260,7 @@ bool nsAccessibilityService::ShouldCreateImgAccessible(
       ((!aElement->IsHTMLElement(nsGkAtoms::embed) &&
         !aElement->IsHTMLElement(nsGkAtoms::object)) ||
        frame->AccessibleType() != AccType::eImageType) &&
-      CssAltContent(aElement).IsEmpty()) {
+      nsCoreUtils::GetCssAltContent(aElement).valueOr(u""_ns).IsEmpty()) {
     return false;
   }
 
@@ -1429,7 +1429,7 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
     nsIFrame::RenderedText text = frame->GetRenderedText(
         0, UINT32_MAX, nsIFrame::TextOffsetType::OffsetsInContentText,
         nsIFrame::TrailingWhitespace::DontTrim);
-    auto cssAlt = CssAltContent(content);
+    Maybe<nsString> cssAlt = nsCoreUtils::GetCssAltContent(content);
     // Ignore not rendered text nodes and whitespace text nodes between table
     // cells.
     if (text.mString.IsEmpty() ||
@@ -1443,7 +1443,7 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
 
       return nullptr;
     }
-    if (cssAlt && cssAlt.IsEmpty()) {
+    if (cssAlt && cssAlt->IsEmpty()) {
       if (aIsSubtreeHidden) {
         *aIsSubtreeHidden = true;
       }
@@ -1453,9 +1453,7 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
     MOZ_ASSERT(newAcc, "Accessible not created for text node!");
     document->BindToDocument(newAcc, nullptr);
     if (cssAlt) {
-      nsAutoString text;
-      cssAlt.AppendToString(text);
-      newAcc->AsTextLeaf()->SetText(text);
+      newAcc->AsTextLeaf()->SetText(*cssAlt);
     } else {
       newAcc->AsTextLeaf()->SetText(text.mString);
     }
@@ -1630,8 +1628,8 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
       if (aIsSubtreeHidden) {
         *aIsSubtreeHidden = true;
       }
-    } else if (auto cssAlt = CssAltContent(content);
-               cssAlt && !cssAlt.IsEmpty()) {
+    } else if (Maybe<nsString> cssAlt = nsCoreUtils::GetCssAltContent(content);
+               cssAlt && !cssAlt->IsEmpty()) {
       // This is a pseudo-element without children that has CSS alt text which
       // isn't empty. This only happens when there is alt text with an empty
       // content string; e.g. content: "" / "alt" In this case, we need to
@@ -1639,9 +1637,7 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
       // child to use. We create a TextLeafAccessible with the pseudo-element as
       // the backing DOM node.
       newAcc = MakeRefPtr<TextLeafAccessible>(content, document);
-      nsAutoString text;
-      cssAlt.AppendToString(text);
-      newAcc->AsTextLeaf()->SetText(text);
+      newAcc->AsTextLeaf()->SetText(*cssAlt);
     }
   }
 
