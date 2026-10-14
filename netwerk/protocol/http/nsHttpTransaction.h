@@ -460,7 +460,10 @@ class nsHttpTransaction final : public nsAHttpTransaction,
   // 2. If only some records have echConfig and some not, we always fallback to
   // this origin conn info.
   RefPtr<nsHttpConnectionInfo> mOrigConnInfo;
-  nsHttpRequestHead* mRequestHead{nullptr};    // weak ref
+  // nsHttpRequestHead has its own lock.  The channel outlives this
+  // transaction because the pump reading mPipeIn holds it until
+  // Close() closes the pipe.
+  nsHttpRequestHead* mRequestHead{nullptr};
   nsHttpResponseHead* mResponseHead{nullptr};  // owning pointer
 
   nsAHttpSegmentReader* mReader{nullptr};
