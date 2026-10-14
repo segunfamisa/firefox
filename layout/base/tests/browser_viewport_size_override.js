@@ -39,8 +39,18 @@ add_task(async function test_override_fixes_the_layout_viewport() {
         );
       }, "viewport units resolve against the overridden size");
 
+      // The visual viewport can now scroll inside the larger layout viewport,
+      // so classic scrollbars take their width off it.
+      let scrollbarWidth = {};
+      content.windowUtils.getScrollbarSizes(
+        doc.documentElement,
+        scrollbarWidth,
+        {}
+      );
       Assert.less(
-        Math.abs(content.visualViewport.width - visualWidth),
+        Math.abs(
+          content.visualViewport.width - (visualWidth - scrollbarWidth.value)
+        ),
         1,
         "the visual viewport still follows the browser"
       );
