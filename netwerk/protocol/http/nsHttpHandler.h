@@ -316,8 +316,7 @@ class nsHttpHandler final : public nsIHttpProtocolHandler,
                                             uint32_t caps,
                                             SpeculativeTransaction* aTrans);
 
-  // Alternate Services Maps are updated on the main thread, but they can also
-  // be read on the TRR thread.
+  // Alternate Services Maps are main thread only
   void UpdateAltServiceMapping(AltSvcMapping* map, nsProxyInfo* proxyInfo,
                                nsIInterfaceRequestor* callbacks, uint32_t caps,
                                const OriginAttributes& originAttributes) {
