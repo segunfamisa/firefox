@@ -2903,6 +2903,24 @@ public class GeckoSession {
   }
 
   /**
+   * Set this GeckoSession as active or inactive, same as {@link #setActive}, except that going
+   * inactive is skipped while {@link
+   * PictureInPictureController.SessionPictureInPicture#setKeepActive} is set. Once the embedder
+   * clears the flag, it must call {@link #setActive} with {@code false} if the session is no longer
+   * showing anywhere.
+   *
+   * @param active A boolean determining whether the GeckoSession is active.
+   */
+  @UiThread
+  @OptIn(markerClass = ExperimentalGeckoViewApi.class)
+  /* package */ void maybeSetActive(final boolean active) {
+    if (!active && mPictureInPicture.keepsActive()) {
+      return;
+    }
+    setActive(active);
+  }
+
+  /**
    * Move focus to this session or away from this session. Only one session has focus at a given
    * time. Note that a session can be unfocused but still active (i.e. visible).
    *

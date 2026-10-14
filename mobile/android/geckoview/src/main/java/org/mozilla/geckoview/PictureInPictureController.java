@@ -30,6 +30,9 @@ public class PictureInPictureController {
     private final GeckoSession mSession;
     private final Handler mHandler;
 
+    /** UI thread only. */
+    private boolean mKeepActive;
+
     /* package */ SessionPictureInPicture(final @NonNull GeckoSession session) {
       mSession = session;
       mHandler = new Handler(session);
@@ -66,10 +69,33 @@ public class PictureInPictureController {
       return mSession.getEventDispatcher().queryVoid(EXIT_EVENT);
     }
 
+    /**
+     * Sets whether the {@link GeckoView} showing this session leaves it active when it stops
+     * showing it. An inactive page is hidden, and pages commonly pause their video when hidden, so
+     * set this while a picture-in-picture window is showing one of this session's videos.
+     *
+     * <p>Once the window is gone, clear it and call {@link GeckoSession#setActive} with {@code
+     * false} if the session is no longer showing anywhere, since the view will not do it.
+     *
+     * @param keepActive Whether to keep this session active.
+     */
+    @UiThread
+    public void setKeepActive(final boolean keepActive) {
+      ThreadUtils.assertOnUiThread();
+      mKeepActive = keepActive;
+    }
+
+    /* package */ boolean keepsActive() {
+      return mKeepActive;
+    }
+
     /** Delegate for opening and closing picture-in-picture windows on Gecko's behalf. */
     public interface Delegate {
       /**
        * Called when the page loaded in {@code session} requests picture-in-picture.
+       *
+       * <p>If the window is already showing a video from another session, call {@link #exit} on
+       * that session before replacing it.
        *
        * @param session The session the video belongs to.
        * @param placementToken Token that opens the picture-in-picture session where it can clone
