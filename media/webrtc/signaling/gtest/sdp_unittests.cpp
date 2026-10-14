@@ -2147,8 +2147,11 @@ TEST_P(NewSdpTest, Av1AudioVideoSdpParseLinefeedOnly) {
 
 TEST_P(NewSdpTest, CheckAv1Fmtp) {
   // https://aomediacodec.github.io/av1-rtp-spec/#sdp-parameters
-  // The parsers disagree on out-of-range parameters: sipcc ignores them, while
-  // the rust parser rejects the whole SDP. See bug 2067241.
+  // Out-of-range parameters are ignored.
+  // This changed from being rejected by webrtc-sdp, to bring the two
+  // parsers in line with each other, before switching over to using
+  // webrtc-sdp exclusively. We can then address the differences one
+  // by one. See bug 2067241.
   for (const auto* outOfRange : {"profile=3", "level-idx=32", "tier=2"}) {
     ParseSdp(
         kVideoSdp + "a=rtpmap:99 AV1/90000\r\na=fmtp:99 " + outOfRange + "\r\n",
