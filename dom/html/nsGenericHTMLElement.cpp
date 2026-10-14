@@ -3304,16 +3304,21 @@ void nsGenericHTMLElement::GetInnerText(mozilla::dom::DOMString& aValue,
     }
   }
 
-  // Check for dirty reflow roots in the subtree from targetFrame; this requires
-  // a reflow flush.
-  bool dirty = frame && frame->PresShell()->FrameIsAncestorOfDirtyRoot(frame);
-
+  // Check for dirty reflow roots in the subtrees of frame and its
+  // continuations; this requires a reflow flush.
+  //
   // The way we do that is by checking whether the element has either of the two
-  // dirty bits (NS_FRAME_IS_DIRTY or NS_FRAME_HAS_DIRTY_DESCENDANTS) or if any
+  // dirty bits (NS_FRAME_IS_DIRTY or NS_FRAME_HAS_DIRTY_CHILDREN) or if any
   // ancestor has NS_FRAME_IS_DIRTY.  We need to check for NS_FRAME_IS_DIRTY on
   // ancestors since that is something that implies NS_FRAME_IS_DIRTY on all
   // descendants.
-  dirty |= frame && frame->HasAnyStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  bool dirty = false;
+  const PresShell* ps = frame ? frame->PresShell() : nullptr;
+  for (nsIFrame* f = frame; f && !dirty;
+       f = nsLayoutUtils::GetNextContinuationOrIBSplitSibling(f)) {
+    dirty = ps->FrameIsAncestorOfDirtyRoot(f) ||
+            f->HasAnyStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  }
   while (!dirty && frame) {
     dirty |= frame->HasAnyStateBits(NS_FRAME_IS_DIRTY);
     frame = frame->GetInFlowParent();
