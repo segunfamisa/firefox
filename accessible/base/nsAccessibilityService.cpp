@@ -1624,6 +1624,13 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
     } else if (content->IsGeneratedContentContainerForMarker()) {
       if (aContext->IsHTMLListItem()) {
         newAcc = MakeRefPtr<HTMLListBulletAccessible>(content, document);
+        nsAutoString text;
+        HTMLListBulletAccessible::ComputeText(content, text);
+        // An HTMLListBulletAccessible is a special kind of TextLeafAccessible.
+        // This is so we can cache the text, since it's not safe to retrieve the
+        // text from layout except during refresh ticks. This also allows us to
+        // use TextUpdater to fire events.
+        newAcc->AsTextLeaf()->SetText(text);
       }
       if (aIsSubtreeHidden) {
         *aIsSubtreeHidden = true;

@@ -6,6 +6,7 @@
 
 #include "DocAccessible-inl.h"
 #include "DocAccessibleChild.h"
+#include "HTMLListAccessible.h"
 #include "LocalAccessible-inl.h"
 #include "TextLeafAccessible.h"
 #include "TextUpdater.h"
@@ -813,6 +814,19 @@ void NotificationController::WillRefresh(mozilla::TimeStamp aTime) {
     if (!containerNode || textNode->OwnerDoc() != mDocument->DocumentNode()) {
       MOZ_ASSERT(!textAcc,
                  "Text node was removed but accessible is kept alive!");
+      continue;
+    }
+
+    if (containerNode->IsGeneratedContentContainerForMarker()) {
+      // This is the text of a bullet. Unlike most TextLeafAccessibles which are
+      // backed by a DOM text node, an HTMLListBulletAccessible is backed by the
+      // ::marker element and gets its text differently.
+      if (LocalAccessible* bullet = mDocument->GetAccessible(containerNode)) {
+        nsAutoString text;
+        HTMLListBulletAccessible::ComputeText(containerNode->AsContent(),
+                                              text);
+        TextUpdater::Run(mDocument, bullet->AsTextLeaf(), text);
+      }
       continue;
     }
 
