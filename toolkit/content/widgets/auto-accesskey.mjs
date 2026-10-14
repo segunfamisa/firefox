@@ -61,18 +61,10 @@ export function assignAutoAccessKeys(popup) {
 
 function assign(popup) {
   let isPanelList = popup.localName == "panel-list";
-  let items = [
-    ...popup.querySelectorAll(
-      isPanelList
-        ? "panel-item"
-        : ":is(:scope, :scope > menugroup) > :is(menuitem, menu)"
-    ),
-  ];
+  let items = popup.getMenuItems({ includeDisabled: true });
   let otherItems = items.filter(
     item =>
-      !item.matches(
-        "[auto-accesskey], [hidden], :is(menuitem, menu)[role][disabled]"
-      )
+      !item.matches("[auto-accesskey], :is(menuitem, menu)[role][disabled]")
   );
   let othersHaveNoKeys =
     otherItems.length &&
