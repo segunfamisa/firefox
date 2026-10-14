@@ -3012,6 +3012,7 @@ const MESSAGES = () => [
           targeting:
             "('messaging-system-action.hnt-card-stack.screen'|preferenceValue(1)) <= 3",
           force_hide_steps_indicator: true,
+          auto_dismiss: { after: 6000 },
           content: {
             position: "card-stack",
             layout: "last-card",
