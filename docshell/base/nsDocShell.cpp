@@ -12148,36 +12148,6 @@ OnLinkClickEvent::OnLinkClickEvent(nsDocShell* aHandler, nsIContent* aContent,
       mTriggeringPrincipal(aTriggeringPrincipal),
       mNoOpenerImplied(aNoOpenerImplied) {}
 
-Result<RefPtr<OnLinkClickEvent>, nsresult> nsDocShell::OnLinkClickWithLoadState(
-    nsIContent* aContent, nsDocShellLoadState* aLoadState,
-    bool aNoOpenerImplied, nsIPrincipal* aTriggeringPrincipal) {
-  if (StaticPrefs::dom_forms_submit_async_navigation()) {
-    // Determine BC to target synchronously, for consistency with other browsers
-    // (Guarding this behind dom.forms.submit_async_navigation since this change
-    //  is necessary for async form navigation, and it may cause regressions.)
-    ComputeNamedTargetBrowsingContext(aLoadState);
-    if (aContent->IsHTMLElement(nsGkAtoms::form)) {
-      // https://html.spec.whatwg.org/#form-submission-algorithm
-      // 25. If form document equals targetNavigable's active document, and form
-      //     document has not yet completely loaded, then set historyHandling to
-      //     "replace".
-      const MaybeDiscarded<BrowsingContext>& bc =
-          aLoadState->TargetBrowsingContext();
-      Document* formDocument = aContent->OwnerDoc();
-      if ((bc.IsNull() || bc == formDocument->GetBrowsingContext()) &&
-          !formDocument->IsCompletelyLoaded()) {
-        aLoadState->SetHistoryBehavior(NavigationHistoryBehavior::Replace);
-      }
-    }
-  }
-  RefPtr ev = MakeRefPtr<OnLinkClickEvent>(
-      this, aContent, aLoadState, aNoOpenerImplied, aTriggeringPrincipal);
-  RefPtr<nsIRunnable> runnable = ev;
-  nsresult rv = Dispatch(runnable.forget());
-  NS_ENSURE_SUCCESS(rv, Err(rv));
-  return ev;
-}
-
 nsresult nsDocShell::OnFormSubmit(HTMLFormElement* aForm,
                                   nsDocShellLoadState* aLoadState) {
   // Need to do this here, since it's ordinarily done in OnLinkClick.
@@ -12188,15 +12158,29 @@ nsresult nsDocShell::OnFormSubmit(HTMLFormElement* aForm,
     return OnLinkClickSync(aForm, aLoadState, false, aForm->NodePrincipal());
   }
 
-  auto result = OnLinkClickWithLoadState(aForm, aLoadState, false,
-                                         aForm->NodePrincipal());
-  if (result.isErr()) {
-    return result.unwrapErr();
+  // Determine BC to target synchronously, for consistency with other browsers
+  ComputeNamedTargetBrowsingContext(aLoadState);
+
+  // https://html.spec.whatwg.org/#form-submission-algorithm
+  // 25. If form document equals targetNavigable's active document, and form
+  //     document has not yet completely loaded, then set historyHandling to
+  //     "replace".
+  const MaybeDiscarded<BrowsingContext>& targetBC =
+      aLoadState->TargetBrowsingContext();
+  Document* formDocument = aForm->OwnerDoc();
+  if ((targetBC.IsNull() || targetBC == formDocument->GetBrowsingContext()) &&
+      !formDocument->IsCompletelyLoaded()) {
+    aLoadState->SetHistoryBehavior(NavigationHistoryBehavior::Replace);
   }
+
+  RefPtr ev = MakeRefPtr<OnLinkClickEvent>(this, aForm, aLoadState, false,
+                                           aForm->NodePrincipal());
+  RefPtr<nsIRunnable> runnable = ev;
+  nsresult rv = Dispatch(runnable.forget());
+  NS_ENSURE_SUCCESS(rv, rv);
+
   nsDocShell* targetDocShell = this;
   if (!aLoadState->Target().IsEmpty()) {
-    const MaybeDiscarded<BrowsingContext>& targetBC =
-        aLoadState->TargetBrowsingContext();
     targetDocShell =
         targetBC.IsNullOrDiscarded()
             ? nullptr
@@ -12207,7 +12191,7 @@ nsresult nsDocShell::OnFormSubmit(HTMLFormElement* aForm,
     // Chrome stops pending javascript: navigations here.
     // https://github.com/whatwg/html/issues/12607
     targetDocShell->StopPendingJavascriptURLNavigations();
-    targetDocShell->mPlannedFormNavigation = result.unwrap().get();
+    targetDocShell->mPlannedFormNavigation = ev.get();
   }
   return NS_OK;
 }
@@ -12326,9 +12310,12 @@ nsresult nsDocShell::OnLinkClick(
       ownerDoc->GetScriptTrackingFlags());
   loadState->SetHistoryBehavior(NavigationHistoryBehavior::Auto);
 
-  auto result = OnLinkClickWithLoadState(aContent, loadState, noOpenerImplied,
-                                         aTriggeringPrincipal);
-  return result.isErr() ? result.unwrapErr() : NS_OK;
+  ComputeNamedTargetBrowsingContext(loadState);
+
+  RefPtr ev = MakeRefPtr<OnLinkClickEvent>(
+      this, aContent, loadState, noOpenerImplied, aTriggeringPrincipal);
+  RefPtr<nsIRunnable> runnable = ev;
+  return Dispatch(runnable.forget());
 }
 
 bool nsDocShell::ShouldOpenInBlankTarget(const nsAString& aOriginalTarget,
