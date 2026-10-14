@@ -11523,8 +11523,13 @@ nsViewportInfo Document::GetViewportInfo(const ScreenIntSize& aDisplaySize) {
 
   if (HasViewportSizeOverrideForMiniWindow()) {
     // Lay out at exactly the overridden size, ignoring any meta viewport. Start
-    // unzoomed, within the usual zoom limits; chrome sets the zoom it wants.
-    CSSToScreenScale minZoom = layoutDeviceScale * ViewportMinScale();
+    // unzoomed; chrome sets the zoom it wants.
+    //
+    // Use a much lower minimum, or a window narrower than the content at
+    // minimum zoom makes the MobileViewportManager stop scaling the zoom with
+    // the window.
+    CSSToScreenScale minZoom =
+        layoutDeviceScale * LayoutDeviceToScreenScale(0.01f);
     CSSToScreenScale maxZoom = layoutDeviceScale * ViewportMaxScale();
     return nsViewportInfo(
         defaultScale, minZoom, maxZoom, mViewportSizeOverrideForMiniWindow,
