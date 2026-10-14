@@ -1050,9 +1050,27 @@ export class TopSitesFeed {
     Services.prefs.addObserver(DEFAULT_SITES_EXPERIMENTS_PREF_BRANCH, this);
     lazy.NimbusFeatures.newtab.onUpdate(this._nimbusChangeListener);
     this.frecencyBoostProvider.init();
-    SponsoredTopSitesScoreProvider.init(
-      () => this.store.getState().Prefs.values.adsBackendConfig
-    );
+    this._updateSponsoredScoring();
+  }
+
+  /**
+   * Starts the sponsored top sites scoring when shortcuts and sponsored
+   * shortcuts are both shown, and otherwise stops it and clears its data.
+   */
+  _updateSponsoredScoring() {
+    const { values } = this.store.getState().Prefs;
+    if (values[SHOWN_ON_NEWTAB_PREF] && values[SHOW_SPONSORED_PREF]) {
+      // init() only initializes if initialization has not already occurred,
+      // so it is safe to call while the scoring is running.
+      SponsoredTopSitesScoreProvider.init(
+        () => this.store.getState().Prefs.values.adsBackendConfig
+      );
+    } else {
+      SponsoredTopSitesScoreProvider.clearData().catch(e =>
+        lazy.log.error(`Failed to clear sponsored scoring data: ${e}`)
+      );
+      SponsoredTopSitesScoreProvider.uninit();
+    }
   }
 
   uninit() {
@@ -2811,7 +2829,13 @@ export class TopSitesFeed {
             if (!action.data.value) {
               this._contile._resetContileCache();
             }
+            if (action.data.name === SHOW_SPONSORED_PREF) {
+              this._updateSponsoredScoring();
+            }
 
+            break;
+          case SHOWN_ON_NEWTAB_PREF:
+            this._updateSponsoredScoring();
             break;
           case SEARCH_SHORTCUTS_EXPERIMENT:
             if (action.data.value) {
