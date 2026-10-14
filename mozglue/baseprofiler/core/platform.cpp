@@ -288,12 +288,12 @@ class CorePS {
   ~CorePS() = default;
 
  public:
-  static void Create(PSLockRef /*aLock*/) {
+  static void Create(PSLockRef aLock) {
     MOZ_ASSERT(!sInstance);
     sInstance = new CorePS();
   }
 
-  static void Destroy(PSLockRef /*aLock*/) {
+  static void Destroy(PSLockRef aLock) {
     MOZ_ASSERT(sInstance);
     delete sInstance;
     sInstance = nullptr;
@@ -305,7 +305,7 @@ class CorePS {
   static bool Exists() { return !!sInstance; }
 
   static void AddSizeOf(PSLockRef, MallocSizeOf aMallocSizeOf,
-                        size_t& aProfSize, size_t& /*aLulSize*/) {
+                        size_t& aProfSize, size_t& aLulSize) {
     MOZ_ASSERT(sInstance);
 
     aProfSize += aMallocSizeOf(sInstance);
@@ -472,8 +472,7 @@ class ActivePS {
                              size_t(scMaximumChunkSize)));
   }
 
-  static uint32_t AdjustFeatures(uint32_t aFeatures,
-                                 uint32_t /*aFilterCount*/) {
+  static uint32_t AdjustFeatures(uint32_t aFeatures, uint32_t aFilterCount) {
     // Filter out any features unavailable in this platform/configuration.
     aFeatures &= AvailableFeatures();
 
@@ -569,7 +568,7 @@ class ActivePS {
                              aFeatures, aFilters, aFilterCount, aDuration);
   }
 
-  [[nodiscard]] static SamplerThread* Destroy(PSLockRef /*aLock*/) {
+  [[nodiscard]] static SamplerThread* Destroy(PSLockRef aLock) {
     MOZ_ASSERT(sInstance);
     auto samplerThread = sInstance->mSamplerThread;
     delete sInstance;
@@ -623,7 +622,7 @@ class ActivePS {
     return std::move(sInstance->mProfileBufferChunkManager);
   }
 
-  static bool ShouldProfileThread(PSLockRef /*aLock*/, ThreadInfo* aInfo) {
+  static bool ShouldProfileThread(PSLockRef aLock, ThreadInfo* aInfo) {
     MOZ_ASSERT(sInstance);
     return sInstance->ThreadSelected(aInfo->Name());
   }
@@ -1479,7 +1478,7 @@ static void DoSyncSample(PSLockRef aLock, RegisteredThread& aRegisteredThread,
 // is `aSamplePos`, we can write the rest to `aBuffer` (which may be different).
 static void DoPeriodicSample(PSLockRef aLock,
                              RegisteredThread& aRegisteredThread,
-                             ProfiledThreadData& /*aProfiledThreadData*/,
+                             ProfiledThreadData& aProfiledThreadData,
                              const Registers& aRegs, uint64_t aSamplePos,
                              uint64_t aBufferRangeStart,
                              ProfileBuffer& aBuffer) {
@@ -2174,7 +2173,7 @@ void SamplerThread::Run() {
 
             mSampler.SuspendAndSampleAndResumeThread(
                 lock, *registeredThread, now,
-                [&](const Registers& aRegs, const TimeStamp& /*aNow*/) {
+                [&](const Registers& aRegs, const TimeStamp& aNow) {
                   DoPeriodicSample(lock, *registeredThread, *profiledThreadData,
                                    aRegs, samplePos, bufferRangeStart,
                                    localProfileBuffer);
@@ -3488,10 +3487,10 @@ void profiler_add_js_marker(const char* aMarkerName, const char* aMarkerText) {
 // NOTE: aCollector's methods will be called while the target thread is paused.
 // Doing things in those methods like allocating -- which may try to claim
 // locks -- is a surefire way to deadlock.
-void profiler_suspend_and_sample_thread(
-    BaseProfilerThreadId aThreadId, uint32_t /*aFeatures*/,
-    ProfilerStackCollector& aCollector,
-    [[maybe_unused]] bool aSampleNative /* = true */) {
+void profiler_suspend_and_sample_thread(BaseProfilerThreadId aThreadId,
+                                        uint32_t aFeatures,
+                                        ProfilerStackCollector& aCollector,
+                                        bool aSampleNative /* = true */) {
   const bool isSynchronous = [&aThreadId]() {
     const BaseProfilerThreadId currentThreadId = profiler_current_thread_id();
     if (!aThreadId.IsSpecified()) {
@@ -3518,8 +3517,7 @@ void profiler_suspend_and_sample_thread(
       // Allocate the space for the native stack
       NativeStack nativeStack;
 
-      auto collectStack = [&](const Registers& aRegs,
-                              const TimeStamp& /*aNow*/) {
+      auto collectStack = [&](const Registers& aRegs, const TimeStamp& aNow) {
       // The target thread is now suspended. Collect a native
       // backtrace, and call the callback.
 #if defined(HAVE_FASTINIT_NATIVE_UNWIND)

@@ -170,11 +170,11 @@ void DisableAlarm() {
   MOZ_CRASH("Alarms can't be programmed from sandboxed contexts.  Yet.");
 }
 
-bool SetAlarm(int32_t /*aSeconds*/, int32_t /*aNanoseconds*/) {
+bool SetAlarm(int32_t aSeconds, int32_t aNanoseconds) {
   MOZ_CRASH("Alarms can't be programmed from sandboxed contexts.  Yet.");
 }
 
-void SetProcessPriority(int /*aPid*/, ProcessPriority /*aPriority*/) {
+void SetProcessPriority(int aPid, ProcessPriority aPriority) {
   MOZ_CRASH("Only the main process may set processes' priorities.");
 }
 
@@ -184,7 +184,7 @@ class HalParent : public PHalParent,
                   public ISensorObserver,
                   public WakeLockObserver {
  public:
-  virtual void ActorDestroy(ActorDestroyReason /*aWhy*/) override {
+  virtual void ActorDestroy(ActorDestroyReason aWhy) override {
     // NB: you *must* unconditionally unregister your observer here,
     // if it *may* be registered below.
     hal::UnregisterBatteryObserver(this);
@@ -197,7 +197,7 @@ class HalParent : public PHalParent,
 
   virtual mozilla::ipc::IPCResult RecvVibrate(
       nsTArray<unsigned int>&& pattern, nsTArray<uint64_t>&& id,
-      NotNull<PBrowserParent*> /*browserParent*/) override {
+      NotNull<PBrowserParent*> browserParent) override {
     // We give all content vibration permission.
     //    BrowserParent *browserParent = BrowserParent::GetFrom(browserParent);
     /* xxxkhuey wtf
@@ -210,7 +210,7 @@ class HalParent : public PHalParent,
 
   virtual mozilla::ipc::IPCResult RecvCancelVibrate(
       nsTArray<uint64_t>&& id,
-      NotNull<PBrowserParent*> /*browserParent*/) override {
+      NotNull<PBrowserParent*> browserParent) override {
     // BrowserParent *browserParent = BrowserParent::GetFrom(browserParent);
     /* XXXkhuey wtf
     nsCOMPtr<nsIDOMWindow> window =
@@ -342,7 +342,7 @@ class HalParent : public PHalParent,
 
 class HalChild : public PHalChild {
  public:
-  virtual void ActorDestroy(ActorDestroyReason /*aWhy*/) override {
+  virtual void ActorDestroy(ActorDestroyReason aWhy) override {
     sHalChildDestroyed = true;
     sHal = nullptr;
   }

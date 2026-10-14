@@ -9,9 +9,9 @@
 
 #include "mozilla/Assertions.h"
 
-void handler(int /*signum*/) { exit(gMozCrashReason == nullptr ? 1 : 0); }
+void handler(int signum) { exit(gMozCrashReason == nullptr ? 1 : 0); }
 
-int main(int /*argc*/, char** argv) {
+int main(int argc, char** argv) {
   // libxul starts with gMozCrashReason set to nullptr.
   if (gMozCrashReason) {
     fprintf(stderr, "gMozCrashReason unexpectedly starts set to %s.\n",

@@ -3234,7 +3234,7 @@ static void TestChunkedBufferSingle() {
   VERIFY_PCB_START_END_PUSHED_CLEARED_FAILED(cbSingle, 1 + bufferBytes,
                                              1 + bufferBytes, 0, 0, 0);
   cbSingle.ReadEach(
-      [&](ProfileBufferEntryReader& /*aER*/) { MOZ_RELEASE_ASSERT(false); });
+      [&](ProfileBufferEntryReader& aER) { MOZ_RELEASE_ASSERT(false); });
 
   // Second buffer-filling test: Try to write a final entry that just fits at
   // the end of the chunk.
@@ -3305,7 +3305,7 @@ static void TestChunkedBufferSingle() {
   VERIFY_PCB_START_END_PUSHED_CLEARED_FAILED(cbSingle, 1 + bufferBytes * 2,
                                              1 + bufferBytes * 2, 0, 0, 0);
   cbSingle.ReadEach(
-      [&](ProfileBufferEntryReader& /*aER*/) { MOZ_RELEASE_ASSERT(false); });
+      [&](ProfileBufferEntryReader& aER) { MOZ_RELEASE_ASSERT(false); });
 
   // Clear() recycles the released chunk, so we should be able to record new
   // entries.
@@ -4344,7 +4344,7 @@ void TestUniqueJSONStrings() {
 
   // Empty unique strings.
   VerifyUniqueStringContents(
-      [](SCJW& aWriter, UJS& /*aUniqueStrings*/) {
+      [](SCJW& aWriter, UJS& aUniqueStrings) {
         aWriter.StringElement("string");
       },
       R"("string")", "");

@@ -82,7 +82,7 @@ struct StackWalkTester {
 
   // Callback to be given to the stack walker.
   // aClosure should point at an instance of this class.
-  static void StackWalkCallback(uint32_t aFrameNumber, void* aPC, void* /*aSP*/,
+  static void StackWalkCallback(uint32_t aFrameNumber, void* aPC, void* aSP,
                                 void* aClosure) {
     ASSERT_NE(aClosure, nullptr);
     StackWalkTester& tester = *reinterpret_cast<StackWalkTester*>(aClosure);
@@ -124,8 +124,7 @@ struct StackWalkTester {
   // of them. aTester is the instance of this class for the testcase.
   template <int Id>
   MOZ_NEVER_INLINE MOZ_EXPORT static int IntermediateCallback(
-      int aDepth, int aLastSkipped, int /*aIgnored*/,
-      StackWalkTester& aTester) {
+      int aDepth, int aLastSkipped, int aIgnored, StackWalkTester& aTester) {
     auto& callInfo = aTester.mFuncCalls.at(aDepth + 1);
     if (aDepth == aLastSkipped) {
       aTester.mFirstFramePC = CallerPC();
@@ -144,9 +143,9 @@ struct StackWalkTester {
 #if defined(__clang__)
   __attribute__((no_sanitize("function")))
 #endif
-  MOZ_NEVER_INLINE MOZ_EXPORT static void LeafCallback(
-      int aDepth, int aLastSkipped, int /*aIgnored*/,
-      StackWalkTester& aTester) {
+  MOZ_NEVER_INLINE MOZ_EXPORT static void
+  LeafCallback(int aDepth, int aLastSkipped, int aIgnored,
+               StackWalkTester& aTester) {
     if (aDepth == aLastSkipped) {
       aTester.mFirstFramePC = CallerPC();
     }
