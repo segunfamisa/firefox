@@ -105,6 +105,9 @@
 #endif
 
 #ifdef MOZ_WIDGET_ANDROID
+#  include <android/native_window.h>
+#  include <android/native_window_jni.h>
+
 #  include "ffvpx/hwcontext_mediacodec.h"
 #  include "ffvpx/mediacodec.h"
 #  include "mozilla/java/CodecProxyWrappers.h"

@@ -379,9 +379,8 @@ gfx::Matrix4x4 SurfaceTextureSource::GetTextureTransform() {
 
   // GetTransformMatrix() returns the transform set by the producer side of the
   // SurfaceTexture that must be applied to texture coordinates when
-  // sampling. In some cases we may have set an override value, such as in
-  // AndroidNativeWindowTextureData where we own the producer side, or for
-  // MediaCodec output on devices where where we know the value is incorrect.
+  // sampling. In some cases we may have set an override value, such as for
+  // MediaCodec output on devices where we know the value is incorrect.
   if (mTransformOverride) {
     ret = *mTransformOverride;
   } else {
