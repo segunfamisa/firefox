@@ -78,8 +78,9 @@ class HTMLListBulletAccessible : public TextLeafAccessible {
   }
 
   /**
-   * Compute the text for the bullet of the given ::marker element from layout.
-   * This is used both when creating the bullet and when updating its text.
+   * Compute the text for the bullet of the given ::marker element. This uses
+   * CSS alt content if there is any. Otherwise, it uses layout. This is used
+   * both when creating the bullet and when updating its text.
    */
   static void ComputeText(nsIContent* aMarker, nsAString& aText);
 };

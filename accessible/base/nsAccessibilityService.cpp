@@ -1622,10 +1622,14 @@ LocalAccessible* nsAccessibilityService::CreateAccessible(
         newAcc = MakeRefPtr<HyperTextAccessible>(content, document);
       }
     } else if (content->IsGeneratedContentContainerForMarker()) {
+      nsAutoString text;
       if (aContext->IsHTMLListItem()) {
-        newAcc = MakeRefPtr<HTMLListBulletAccessible>(content, document);
-        nsAutoString text;
         HTMLListBulletAccessible::ComputeText(content, text);
+      }
+      // If there is no text (e.g. because there is empty CSS alt content), we
+      // don't expose the bullet.
+      if (!text.IsEmpty()) {
+        newAcc = MakeRefPtr<HTMLListBulletAccessible>(content, document);
         // An HTMLListBulletAccessible is a special kind of TextLeafAccessible.
         // This is so we can cache the text, since it's not safe to retrieve the
         // text from layout except during refresh ticks. This also allows us to

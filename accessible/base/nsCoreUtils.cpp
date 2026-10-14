@@ -730,8 +730,11 @@ Maybe<nsString> nsCoreUtils::GetCssAltContent(nsIContent* aContent) {
   // Check if this is for a pseudo-element.
   if (IsPseudoElement(aContent)) {
     // If there are children, we want to expose the alt text on those instead,
-    // so ignore it for the pseudo-element itself.
-    if (aContent->HasChildren()) {
+    // so ignore it for the pseudo-element itself. The exception is ::marker,
+    // since a list bullet is a single Accessible for the ::marker element and
+    // its children are never exposed.
+    if (aContent->HasChildren() &&
+        !aContent->IsGeneratedContentContainerForMarker()) {
       return Nothing();
     }
     // No children only happens when there is alt text with an empty content
