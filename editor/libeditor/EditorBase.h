@@ -335,14 +335,10 @@ class EditorBase : public nsIEditor,
    * Return true if it's possible to undo/redo right now.
    */
   bool CanUndo() const {
-    // We should always allow undo/redo for EditContext, since the
-    // history is managed by the web app.
-    return (IsUndoRedoEnabled() && NumberOfUndoItems() > 0) ||
-           ComputeEditContext();
+    return IsUndoRedoEnabled() && NumberOfUndoItems() > 0;
   }
   bool CanRedo() const {
-    return (IsUndoRedoEnabled() && NumberOfRedoItems() > 0) ||
-           ComputeEditContext();
+    return IsUndoRedoEnabled() && NumberOfRedoItems() > 0;
   }
 
   /**
