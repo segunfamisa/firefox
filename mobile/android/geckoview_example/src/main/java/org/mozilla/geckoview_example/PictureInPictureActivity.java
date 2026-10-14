@@ -119,7 +119,7 @@ public class PictureInPictureActivity extends AppCompatActivity {
   /** Tells the source tab its video left the window, and tears down the window's copy of it. */
   @OptIn(markerClass = ExperimentalGeckoViewApi.class)
   private void releaseSession() {
-    if (mSourceSession != null) {
+    if (mSourceSession != null && mSourceSession.isOpen()) {
       mSourceSession.getSessionPictureInPicture().exit();
       PipSessionHolder.releaseSource(mSourceSession);
     }
