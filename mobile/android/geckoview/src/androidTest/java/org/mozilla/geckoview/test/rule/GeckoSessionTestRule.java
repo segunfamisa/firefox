@@ -2831,6 +2831,24 @@ public class GeckoSessionTestRule implements TestRule {
             });
   }
 
+  /**
+   * Whether the video matching {@code selector} is being cloned visually into another video
+   * element, which is what a picture-in-picture player does to the video it shows.
+   *
+   * @param session Session the video lives in.
+   * @param selector Selector resolving to the video.
+   * @return Whether that video is being cloned.
+   */
+  public boolean isVideoCloning(final GeckoSession session, final String selector) {
+    return (Boolean)
+        webExtensionApiCall(
+            session,
+            "IsVideoCloning",
+            args -> {
+              args.put("selector", selector);
+            });
+  }
+
   public List<String> getRequestedLocales() {
     try {
       final JSONArray locales = (JSONArray) webExtensionApiCall("GetRequestedLocales", null);
