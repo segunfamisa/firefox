@@ -113,6 +113,14 @@ this.test = class extends ExtensionAPI {
           );
         },
 
+        /* The message the video controls overlay shows over the video at `selector`, if any. */
+        async getVideoStatusMessage(tabId, selector) {
+          return getActorForTab(tabId, "TestSupport").sendQuery(
+            "GetVideoStatusMessage",
+            { selector }
+          );
+        },
+
         async getRequestedLocales() {
           return Services.locale.requestedLocales;
         },

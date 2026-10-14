@@ -2849,6 +2849,25 @@ public class GeckoSessionTestRule implements TestRule {
             });
   }
 
+  /**
+   * The message the video controls overlay shows over the video matching {@code selector}, as the
+   * user would read it.
+   *
+   * @param session Session the video lives in.
+   * @param selector Selector resolving to the video.
+   * @return The message shown, or null if the overlay shows none.
+   */
+  public @Nullable String getVideoStatusMessage(final GeckoSession session, final String selector) {
+    final Object message =
+        webExtensionApiCall(
+            session,
+            "GetVideoStatusMessage",
+            args -> {
+              args.put("selector", selector);
+            });
+    return message instanceof String ? (String) message : null;
+  }
+
   public List<String> getRequestedLocales() {
     try {
       final JSONArray locales = (JSONArray) webExtensionApiCall("GetRequestedLocales", null);
