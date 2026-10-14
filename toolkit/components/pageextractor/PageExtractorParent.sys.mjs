@@ -105,16 +105,14 @@ export class PageExtractorParent extends JSWindowActorParent {
    *   GetTextOptions field: starts its own trace when omitted.
    * @param {number} [refreshWithinMs] - A refresh only counts as a pending
    *   navigation when it fires within this many milliseconds.
-   * @param {number} [settleDelayMs] - Extra wait after the page is ready.
    * @returns {Promise<{hasPendingNavigation: boolean}>}
    */
-  async waitForPageReady(traceId, refreshWithinMs, settleDelayMs) {
+  async waitForPageReady(traceId, refreshWithinMs) {
     return this.#trace(lazy.Phase.waitForReady, { traceId }, async event => {
       try {
         return await this.sendQuery("PageExtractorParent:WaitForPageReady", {
           traceId: event.traceId,
           refreshWithinMs,
-          settleDelayMs,
         });
       } catch (error) {
         // The document was replaced or its browser torn down before it was
@@ -288,18 +286,9 @@ export class PageExtractorParent extends JSWindowActorParent {
    *   to pass into a follow-up `actor.getText(options, traceId)` call so it
    *   correlates with this request.
    * @param {boolean} [options.anonymousFetch]
-   * @param {number} [options.settleDelayMs] - Extra wait once the page is ready.
-   * @param {AbortSignal} [options.signal] - Tears down the headless browser
-   *   when it aborts before the page is ready.
    * @returns {Promise<T>}
    */
-  static async getHeadlessExtractor({
-    urlString,
-    callback,
-    anonymousFetch,
-    settleDelayMs,
-    signal,
-  }) {
+  static async getHeadlessExtractor({ urlString, callback, anonymousFetch }) {
     const url = URL.parse(urlString);
     if (!url) {
       throw new Error("A valid URL must be provided.");
@@ -382,8 +371,7 @@ export class PageExtractorParent extends JSWindowActorParent {
                 SANDBOXED_DOWNLOADS;
             }
 
-            // Keep the settle wait from counting against the load timeout.
-            const timeoutMs = lazy.headlessTimeoutMs + (settleDelayMs ?? 0);
+            const timeoutMs = lazy.headlessTimeoutMs;
             const deadline = ChromeUtils.now() + timeoutMs;
             // Recorded so a failed read can report a block instead of a stall.
             let offSiteLocation = null;
@@ -496,11 +484,7 @@ export class PageExtractorParent extends JSWindowActorParent {
                   !offSiteLocation &&
                   (hasPendingNavigation || wasReplaced(actor));
                 actor
-                  .waitForPageReady(
-                    traceId,
-                    deadline - ChromeUtils.now(),
-                    settleDelayMs
-                  )
+                  .waitForPageReady(traceId, deadline - ChromeUtils.now())
                   .then(
                     ({ hasPendingNavigation }) => {
                       if (!superseded(hasPendingNavigation)) {
@@ -572,23 +556,8 @@ export class PageExtractorParent extends JSWindowActorParent {
               );
             }, timeoutMs);
 
-            const onAbort = () => {
-              navigateEvent.finish({
-                status: "error",
-                errorName: "AbortError",
-              });
-              actorResolver.reject(new DOMException("Aborted", "AbortError"));
-            };
-            signal?.addEventListener("abort", onAbort, { once: true });
-            if (signal?.aborted) {
-              onAbort();
-            }
-            const ready = actorResolver.promise.finally(() =>
-              signal?.removeEventListener("abort", onAbort)
-            );
-
             try {
-              return await callback(await ready, traceId);
+              return await callback(await actorResolver.promise, traceId);
             } catch (error) {
               if (offSiteLocation && error?.name !== "BlockedError") {
                 throw new DOMException(
