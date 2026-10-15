@@ -24510,11 +24510,12 @@ class GlobalGenRoots:
             "mozilla/dom/WebIDLSerializable.h",
             "mozilla/PerfectHash.h",
         ])
-        descriptors = config.getDescriptors(isSerializable=True)
-        for d in descriptors:
+        names = list()
+        for d in config.getDescriptors(isSerializable=True):
+            names.append(d.name)
             defineIncludes.add(CGHeaders.getDeclarationFilename(d.interface))
 
-        if len(descriptors) == 0:
+        if len(names) == 0:
             # We can't really create a PerfectHash out of this, but also there's
             # not much point to this file if we have no [Serializable] objects.
             # Just spit out an empty file.
@@ -24536,17 +24537,16 @@ class GlobalGenRoots:
         # basically making a second copy of this array ordered by tag, with the
         # holes filled in.  Again, worth checking whether this still happens if
         # we have too many serializable things.
-        if len(descriptors) > 20:
+        if len(names) > 20:
             raise TypeError(
                 "We now have %s serializable interfaces.  "
                 "Double-check that the compiler is still "
-                "generating a jump table." % len(descriptors)
+                "generating a jump table." % len(names)
             )
 
         entries = list()
         # Make sure we have stable ordering.
-        for d in sorted(descriptors, key=lambda descriptor: descriptor.name):
-            name = d.name
+        for name in sorted(names):
             exposedGlobals = computeGlobalNamesFromExposureSet(d.interface.exposureSet)
             # Strip off trailing newline to make our formatting look right.
             entries.append(

@@ -97,7 +97,7 @@ enum StructuredCloneTags : uint32_t {
 
   // IMPORTANT: Don't change the order of these enum values. You could break
   // IDB.
-  SCTAG_DOM_QUOTAEXCEEDEDERROR,
+  EMPTY_SLOT_9,
 
   // IMPORTANT: Don't change the order of these enum values. You could break
   // IDB.

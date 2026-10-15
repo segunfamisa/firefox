@@ -535,8 +535,6 @@ let interfaceNamesInGlobalScope = [
   // IMPORTANT: Do not change this list without review from a DOM peer!
   "PushSubscriptionOptions",
   // IMPORTANT: Do not change this list without review from a DOM peer!
-  { name: "QuotaExceededError", nightly: true },
-  // IMPORTANT: Do not change this list without review from a DOM peer!
   "ReadableByteStreamController",
   // IMPORTANT: Do not change this list without review from a DOM peer!
   "ReadableStream",
