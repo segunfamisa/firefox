@@ -34,6 +34,8 @@ class DestroyingAPZBridgeChild final : public APZBridgeChild {
   bool& mIsDestroyed;
 };
 
+}  // namespace
+
 class APZBridgeTester : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -42,8 +44,6 @@ class APZBridgeTester : public ::testing::Test {
 
   void TearDown() override { APZThreadUtils::SetControllerThread(nullptr); }
 };
-
-}  // namespace
 
 TEST_F(APZBridgeTester, DestroyOwnerDuringMouseInput) {
   bool isDestroyed = false;
