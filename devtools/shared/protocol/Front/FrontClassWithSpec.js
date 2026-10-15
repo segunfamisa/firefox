@@ -12,7 +12,7 @@ var { Front } = require("resource://devtools/shared/protocol/Front.js");
 
 const logger = console.createInstance({
   prefix: "devtools_rdp",
-  maxLogLevel: "warn",
+  maxLogLevel: "Warn",
 });
 
 // Hack MOZ_LOG/Console.cpp usage of ToSource logic
@@ -77,7 +77,7 @@ var generateRequestMethods = function (actorSpec, frontProto) {
       // which are all quite visible and different from each others.
       // Note that colors are specific to each request and not each front.
       let color;
-      if (logger.shouldLog("log")) {
+      if (logger.shouldLog("Log")) {
         color = 1 + (colorCounter % 15);
         colorCounter++;
         logger.log(
@@ -103,7 +103,7 @@ var generateRequestMethods = function (actorSpec, frontProto) {
         if (isReceivingBulkData) {
           return response;
         }
-        if (logger.shouldLog("log")) {
+        if (logger.shouldLog("Log")) {
           logger.log(
             {
               toSource() {

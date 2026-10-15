@@ -50,7 +50,7 @@ loader.lazyRequireGetter(
 
 const logger = console.createInstance({
   prefix: "devtools_rdp",
-  maxLogLevel: "warn",
+  maxLogLevel: "Warn",
 });
 
 // Hack MOZ_LOG/Console.cpp usage of ToSource logic
