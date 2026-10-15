@@ -862,7 +862,6 @@ class nsHttpHandler final : public nsIHttpProtocolHandler,
   DataMutex<nsClassHashtable<nsCStringHashKey, nsCString>>
       mAltSvcMappingTemptativeMap{"nsHttpHandler::AltSvcMappingTemptativeMap"};
 
-  // Set in Init and released in the destructor; read on the socket thread.
   nsCOMPtr<nsIHttpActivityDistributor> mActivityDistributor;
 };
 
