@@ -561,17 +561,20 @@ add_task(async function test_what_each_store_derives_is_not_a_divergence() {
 });
 
 add_task(async function test_the_security_code_moves_into_rust_only() {
-  // The JSON store keeps the code as an unknown field, in the clear, and
-  // records the empty string for a form submitted without one. The Rust store
-  // holds it encrypted, and holds no code for the empty string. The copy into
-  // Rust carries the code whether or not the CVV prefs let a consumer read it,
-  // so it is checked through raw reads. The copy back leaves a code behind,
-  // and keeps what the JSON store still holds for a card nobody edited.
-  let { s, guids } = await setupStorageWithCards("cc-mig-csc.json", []);
-  setSecurityCodeEnabled(true);
-  guids.push(await s.creditCards.add({ ...card("Ann One"), "cc-csc": "123" }));
-  guids.push(await s.creditCards.add({ ...card("Bob Two"), "cc-csc": "" }));
-  setSecurityCodeEnabled(false);
+  // CVV needs the Rust store, so the JSON store takes no code through add().
+  // It holds one only from before that, kept in the clear as an unknown field,
+  // with the empty string for a form submitted without one; those are written
+  // into its records directly. The Rust store holds the code encrypted, and no
+  // code for the empty string. The copy into Rust carries the code whether or
+  // not the CVV prefs let a consumer read it, so it is checked through raw
+  // reads. The copy back leaves a code behind, and keeps what the JSON store
+  // still holds for a card nobody edited.
+  let { s, guids } = await setupStorageWithCards("cc-mig-csc.json", [
+    "Ann One",
+    "Bob Two",
+  ]);
+  s.creditCards._data[0]["cc-csc"] = "123";
+  s.creditCards._data[1]["cc-csc"] = "";
 
   s = await enableRust(s);
   Assert.ok(getBool(ACTIVE_PREF), "moved to Rust");
