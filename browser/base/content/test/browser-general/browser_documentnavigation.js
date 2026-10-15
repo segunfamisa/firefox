@@ -288,9 +288,15 @@ add_task(async function () {
   );
 
   let expectedSidebarFocusElement;
+  // Bug 2006225: sidebar.revamp introduces a regression where the "X" button receives
+  // focus instead of the search input.
   if (isUpdatedBookmarks) {
     expectedSidebarFocusElement =
-      bookmarksComponent.searchInput.shadowRoot.getElementById("input");
+      bookmarksComponent.panelHeader.closeButton.buttonEl;
+  } else if (Services.prefs.getBoolPref("sidebar.revamp")) {
+    expectedSidebarFocusElement = sidebar.contentDocument
+      .getElementById("sidebar-panel-close")
+      .shadowRoot.querySelector("#main-button");
   } else {
     expectedSidebarFocusElement = sidebar.contentDocument
       .getElementById("search-box")
