@@ -7473,7 +7473,9 @@ void nsWindow::OnUnmap() {
   // Don't do this for temporarily hidden popups tho, as remote content is not
   // set up to survive the layer manager destruction of the containing window,
   // see bug 1958695.
-  if (mWindowType == WindowType::Popup && !mPopupTemporaryHidden) {
+  // Don't use for accelerated popups (Bug 2079668).
+  if (!mIsAccelerated &&
+     mWindowType == WindowType::Popup && !mPopupTemporaryHidden) {
     DestroyLayerManager();
   }
 }
