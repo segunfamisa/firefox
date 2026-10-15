@@ -3003,8 +3003,8 @@ static bool PromiseResolveBuiltinThenableJob(JSContext* cx,
  *
  * Returns true in *needsDeferral if the synchronous steps of resolving a
  * promise with `value` _might_ execute user code: e.g.
- * - a Proxy or other exotic object on the prototype chain, an accessor
- *   for `"then"`, or a callable data-property `"then"`.
+ * - a Proxy or other exotic object on the prototype chain, an accessor with a
+ *   getter for `"then"`, or a callable data-property `"then"`.
  *
  */
 [[nodiscard]] static bool RequiresDeferredPromiseResolution(
@@ -3014,12 +3014,37 @@ static bool PromiseResolveBuiltinThenableJob(JSContext* cx,
     return true;
   }
 
-  RootedValue thenVal(cx);
-  if (!GetPropertyPure(cx, &value.toObject(), NameToId(cx->names().then),
-                       thenVal.address())) {
+  // Do lookup first, and only GetProperty if needed.
+  NativeObject* holder;
+  PropertyResult prop;
+  if (!LookupPropertyPure(cx, &value.toObject(), NameToId(cx->names().then),
+                          &holder, &prop)) {
+    // PropertyAccessCouldRunUserCode: Lookup encountered exotic (proxy
+    // included).
     *needsDeferral = true;
     return true;
   }
+
+  if (prop.isNotFound()) {
+    return true;
+  }
+
+  MOZ_ASSERT(prop.isNativeProperty());
+
+  PropertyInfo propInfo = prop.propertyInfo();
+  if (propInfo.isAccessorProperty()) {
+    // PropertyAccessCouldRunUserCode: Getter needs deferral.
+    *needsDeferral = holder->hasGetter(propInfo);
+    return true;
+  }
+
+  MOZ_ASSERT(propInfo.isDataProperty());
+
+  // Given the checks here, we should _definitely_ get a data property at this
+  // point.
+  Value thenVal;
+  MOZ_ALWAYS_TRUE(GetPropertyPure(cx, &value.toObject(),
+                                  NameToId(cx->names().then), &thenVal));
 
   *needsDeferral = IsCallable(thenVal);
   return true;
