@@ -22,7 +22,7 @@ loader.lazyGetter(this, "ScriptableInputStream", () => {
 
 const logger = console.createInstance({
   prefix: "devtools_rdp",
-  maxLogLevel: "Warn",
+  maxLogLevel: "warn",
 });
 
 const PACKET_HEADER_MAX = 200;
@@ -474,7 +474,7 @@ class DebuggerTransport {
       return;
     }
     // `_incoming` is the RDP packet as a string, so it can be very large.
-    if (logger.shouldLog("Debug")) {
+    if (logger.shouldLog("debug")) {
       logger.debug("Got: ", this._incoming);
     }
     this._destroyIncoming();
