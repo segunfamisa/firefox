@@ -4416,6 +4416,9 @@ nsresult nsHttpChannel::OpenRedirectChannel(nsresult rv) {
 
   notifier.RedirectSucceeded();
 
+  // Report timing data if e10s is disabled
+  MaybeReportTimingDataForRedirect(mRedirectChannel);
+
   ReleaseListeners();
 
   return NS_OK;
