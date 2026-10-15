@@ -5,6 +5,9 @@
 #ifndef mozilla_antitrackingopenerheuristics_h
 #define mozilla_antitrackingopenerheuristics_h
 
+class nsIURI;
+class nsPIDOMWindowOuter;
+
 namespace mozilla {
 
 namespace dom {
@@ -17,6 +20,11 @@ class Document;
 // had been interacted with before this interaction.
 void MaybeAllowStorageForOpenerAfterUserInteraction(
     dom::Document* aDocument, bool aHadPriorUserInteraction);
+
+// Called when aOpener has opened a new window for aURI. If aURI is third-party
+// with respect to aOpener, grant storage access to aURI's origin in aOpener.
+void MaybeAllowStorageForOpenedWindow(nsPIDOMWindowOuter* aOpener,
+                                      nsIURI* aURI);
 
 }  // namespace mozilla
 
