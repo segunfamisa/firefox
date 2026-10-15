@@ -406,13 +406,24 @@ class WebPlatformTest(TestingMixin, MercurialScript, CodeCoverageMixin, AndroidM
 
         # Only the default testharness jobs: the tag-scoped ones run a
         # different test selection that hasn't been measured, and the VM pools
-        # have much less memory per guest.
+        # have much less memory per guest. The exception is the WebGPU CTS jobs
+        # on the Intel workers, which run one test at a time and leave them
+        # mostly idle.
         is_parallel_capable_mac = (
             sys.platform.startswith("darwin")
-            and mozinfo.info.get("arch") == "aarch64"
-            and not mozinfo.info.get("macos_vm")
             and list(test_types) == ["testharness"]
-            and not c["tag"]
+            and (
+                (
+                    mozinfo.info.get("arch") == "aarch64"
+                    and not mozinfo.info.get("macos_vm")
+                    and not c["tag"]
+                )
+                or (
+                    mozinfo.info.get("arch") == "x86_64"
+                    and any(tag in ("webgpu", "webgpu-long") for tag in c["tag"])
+                    and not c["backlog"]
+                )
+            )
         )
         if (
             self.is_android
@@ -425,7 +436,8 @@ class WebPlatformTest(TestingMixin, MercurialScript, CodeCoverageMixin, AndroidM
             processes = 1
         elif is_parallel_capable_mac:
             # Verified by experiment on the 10-core/16GB Apple M4 workers
-            # (Mac16,10) in 2026-09; see bug 2050488 for the measurements.
+            # (Mac16,10) in 2026-09 (bug 2050488) and for WebGPU on the macOS
+            # 14.70 Intel workers in 2026-10 (bug 2078310).
             processes = 3
         else:
             processes = 2
