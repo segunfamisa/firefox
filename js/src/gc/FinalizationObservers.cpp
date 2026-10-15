@@ -492,7 +492,8 @@ bool FinalizationObservers::shouldQueueFinalizationRegistryForCleanup(
   return !zone->wasGCStarted() || zone->gcState() >= Zone::Sweep;
 }
 
-static void ExposeObjectToActiveJSDuringCollection(GCRuntime* gc, JSObject* object) {
+static void ExposeObjectToActiveJSDuringCollection(GCRuntime* gc,
+                                                   JSObject* object) {
   // Normally we don't allow any marking during sweeping but gray unmarking does
   // not cause anything to become marked that was not marked already.
 
