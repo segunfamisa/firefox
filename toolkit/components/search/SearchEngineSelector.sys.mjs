@@ -5,6 +5,7 @@
 /**
  * @import {
  *   RefinedSearchConfig,
+ *   RefinedSearchConfigV3,
  *   SearchEngineDefinition
  * } from "../uniffi-bindgen-gecko-js/components/generated/RustSearch.sys.mjs";
  */
@@ -18,6 +19,8 @@ const lazy = XPCOMUtils.declareLazy({
   SearchEngineSelector:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustSearch.sys.mjs",
   SearchUserEnvironment:
+    "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustSearch.sys.mjs",
+  SearchUserEnvironmentV3:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustSearch.sys.mjs",
   SearchApplicationName:
     "moz-src:///toolkit/components/uniffi-bindgen-gecko-js/components/generated/RustSearch.sys.mjs",
@@ -75,10 +78,14 @@ export class SearchEngineSelector {
   /**
    * Handles getting the configuration from remote settings.
    *
+   * @param {boolean} skipSetSearchConfigForSchemaTests
+   *   For tests only. Skips setting the search configuration on the Rust
+   *   search engine selector. Useful for testing schemas without Rust also
+   *   testing.
    * @returns {Promise<object>}
    *   The configuration data.
    */
-  async getEngineConfiguration() {
+  async getEngineConfiguration(skipSetSearchConfigForSchemaTests = false) {
     if (this.#getConfigurationPromise) {
       return this.#getConfigurationPromise;
     }
@@ -102,11 +109,17 @@ export class SearchEngineSelector {
       this.#listenerAdded = true;
     }
 
-    this.#selector.setSearchConfig(
-      JSON.stringify({ data: this.#configuration })
-    );
-    if (!lazy.SearchUtils.configV3FeatureGate) {
-      this.#selector.setConfigOverrides(JSON.stringify({ data: [] }));
+    if (!skipSetSearchConfigForSchemaTests) {
+      if (lazy.SearchUtils.configV3FeatureGate) {
+        this.#selector.setSearchConfigV3(
+          JSON.stringify({ data: this.#configuration })
+        );
+      } else {
+        this.#selector.setSearchConfig(
+          JSON.stringify({ data: this.#configuration })
+        );
+        this.#selector.setConfigOverrides(JSON.stringify({ data: [] }));
+      }
     }
     return this.#configuration;
   }
@@ -178,7 +191,7 @@ export class SearchEngineSelector {
    *   The name of the application.
    * @param {string} [options.version]
    *   The version of the application.
-   * @returns {Promise<RefinedSearchConfig>}
+   * @returns {Promise<RefinedSearchConfig|RefinedSearchConfigV3>}
    *   An object which contains the refined configuration with a filtered list
    *   of search engines, and the identifiers for the application default engines.
    */
@@ -199,22 +212,41 @@ export class SearchEngineSelector {
       `fetchEngineConfiguration ${locale}:${region}:${channel}:${distroID}:${experiment}:${appName}:${version}`
     );
 
-    let refinedSearchConfig = this.#selector.filterEngineConfiguration(
-      new lazy.SearchUserEnvironment({
-        locale,
-        region,
-        updateChannel: this.#convertUpdateChannel(channel),
-        distributionId: distroID ?? "",
-        experiment: experiment ?? "",
-        appName: this.#convertApplicationName(appName),
-        version,
-        deviceType: lazy.SearchDeviceType.NONE,
-      })
-    );
-
-    refinedSearchConfig.engines = refinedSearchConfig.engines.filter(
-      e => !e.optional
-    );
+    /** @type {RefinedSearchConfig|RefinedSearchConfigV3} */
+    let refinedSearchConfig;
+    if (lazy.SearchUtils.configV3FeatureGate) {
+      refinedSearchConfig = this.#selector.filterEngineConfigurationV3(
+        new lazy.SearchUserEnvironmentV3({
+          locale,
+          region,
+          updateChannel: this.#convertUpdateChannel(channel),
+          distributionId: distroID ?? "",
+          experiment: experiment ?? "",
+          appName: this.#convertApplicationName(appName),
+          version,
+          deviceType: lazy.SearchDeviceType.NONE,
+        })
+      );
+      refinedSearchConfig.engines = refinedSearchConfig.engines.filter(
+        e => !e.optional
+      );
+    } else {
+      refinedSearchConfig = this.#selector.filterEngineConfiguration(
+        new lazy.SearchUserEnvironment({
+          locale,
+          region,
+          updateChannel: this.#convertUpdateChannel(channel),
+          distributionId: distroID ?? "",
+          experiment: experiment ?? "",
+          appName: this.#convertApplicationName(appName),
+          version,
+          deviceType: lazy.SearchDeviceType.NONE,
+        })
+      );
+      refinedSearchConfig.engines = refinedSearchConfig.engines.filter(
+        e => !e.optional
+      );
+    }
 
     if (
       !refinedSearchConfig.appDefaultEngineId ||
@@ -340,9 +372,15 @@ export class SearchEngineSelector {
   _onConfigurationUpdated({ data: { current } }) {
     this.#configuration = current;
 
-    this.#selector.setSearchConfig(
-      JSON.stringify({ data: this.#configuration })
-    );
+    if (lazy.SearchUtils.configV3FeatureGate) {
+      this.#selector.setSearchConfigV3(
+        JSON.stringify({ data: this.#configuration })
+      );
+    } else {
+      this.#selector.setSearchConfig(
+        JSON.stringify({ data: this.#configuration })
+      );
+    }
 
     lazy.logConsole.debug("Search configuration updated remotely");
     if (this.#changeListener) {
