@@ -297,6 +297,41 @@ add_task(async function shortSearchStrings() {
   ]);
 });
 
+// Suggestions matched by the empty search string should be shown in the zero
+// prefix view even though `UrlbarProviderTopSites` is also active there.
+add_task(async function zeroPrefixWithTopSites() {
+  UrlbarPrefs.set("suggest.topsites", false);
+  await check_results({
+    context: createContext("", {
+      providers: [UrlbarProviderQuickSuggest.name, "UrlbarProviderTopSites"],
+      isPrivate: false,
+    }),
+    matches: [EXPECTED_EEE_RESULT],
+  });
+  UrlbarPrefs.clear("suggest.topsites");
+});
+
+// Ensure the priority is as expected in the case of either zero prefix or
+// non-empty search query.
+add_task(function priority() {
+  let provider = ProvidersManager.getInstanceForSap("urlbar").getProvider(
+    UrlbarProviderQuickSuggest.name
+  );
+  Assert.equal(
+    provider.getPriority(createContext("", { isPrivate: false })),
+    1,
+    "Zero prefix"
+  );
+  Assert.equal(
+    provider.getPriority(createContext("x", { isPrivate: false })),
+    0,
+    "Non-empty search query"
+  );
+  let context = createContext("", { isPrivate: false });
+  context.restrictSource = UrlbarShared.RESULT_SOURCE.SEARCH;
+  Assert.equal(provider.getPriority(context), 0, "Restrict source");
+});
+
 // When only one dynamic suggestion type is enabled, only its result should be
 // returned. This task assumes multiples types were added to remote settings in
 // the setup task.
