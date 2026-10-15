@@ -2499,12 +2499,6 @@ pref("browser.smartwindow.searchTheWebFast", true);
 // browser.smartwindow.searchTheWebFast.
 pref("browser.smartwindow.searchTheWebAnswers", false);
 
-// Smart Window: approximate location (city, region, country) from Merino
-// geolocation, cached in prefs.
-pref("browser.smartwindow.location.enabled", false);
-pref("browser.smartwindow.location.data", "");
-pref("browser.smartwindow.location.lastCheckSeconds", 0);
-
 // Smart Window Logging
 pref("browser.smartwindow.aiTabHistory.logLevel", "Error");
 pref("browser.smartwindow.aiTabStore.logLevel", "Error");
