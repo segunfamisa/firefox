@@ -555,6 +555,13 @@ pref("browser.urlbar.suggest.weather", true);
 // trending suggestions are turned on.
 pref("browser.urlbar.suggest.trending", true);
 
+// Feature gate pref for temporal search suggestions in the urlbar.
+pref("browser.urlbar.temporal.featureGate", false);
+
+// If `browser.urlbar.temporal.featureGate` is true, this controls whether
+// temporal search suggestions are turned on.
+pref("browser.urlbar.suggest.temporal", true);
+
 // Whether results that are part of the Firefox Suggest brand are shown in the
 // urlbar. This pref is exposed to the user in the UI, and it's sticky so that
 // its user-branch value persists regardless of whatever Firefox Suggest
