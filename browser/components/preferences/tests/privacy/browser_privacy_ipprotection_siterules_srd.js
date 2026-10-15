@@ -687,8 +687,8 @@ add_task(async function test_edit_rule_dialog_prefilled() {
 
 // Test saving edits: changing only the VPN status replaces the rule for the
 // same website, changing the website deletes the old website's rule, and
-// changing it to a website that already has a rule replaces that rule instead
-// of reporting a duplicate.
+// changing it to a website that already has a rule reports a duplicate rather
+// than overwriting that rule.
 add_task(async function test_edit_rule_dialog_saves_changes() {
   const { ALLOW_ACTION, DENY_ACTION } = Ci.nsIPermissionManager;
 
@@ -747,19 +747,35 @@ add_task(async function test_edit_rule_dialog_saves_changes() {
     dialog = await openEditRuleDialog(list, browser, "https://acme.com");
     typeWebsite(dialog.dialogWin, dialog.websiteInput, "example.org");
     dialog.statusSelect.value = "off";
-    await closeRuleDialog(browser, dialog.acceptButton);
+    dialog.acceptButton.click();
 
+    is(
+      dialog.errorEl.getAttribute("data-l10n-id"),
+      "ip-protection-site-rule-duplicate-error",
+      "A website that already has a rule is reported"
+    );
+    ok(
+      dialog.websiteInput.hasAttribute("invalid"),
+      "Website field is marked invalid"
+    );
     Assert.deepEqual(
       storedRules(),
-      ["https://example.org"],
-      "Only the new website's rule is left"
+      ["https://acme.com", "https://example.org"],
+      "Both rules are still stored"
+    );
+    is(
+      capabilityFor("https://acme.com"),
+      ALLOW_ACTION,
+      "The edited rule is unchanged"
     );
     is(
       capabilityFor("https://example.org"),
-      DENY_ACTION,
-      "The edited rule replaced the existing one"
+      ALLOW_ACTION,
+      "The existing rule is not overwritten"
     );
-    await awaitRows(list, ["https://example.org"]);
+
+    await closeRuleDialog(browser, dialog.cancelButton);
+    await awaitRows(list, ["https://acme.com", "https://example.org"]);
   });
 });
 
