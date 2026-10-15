@@ -149,6 +149,37 @@ add_task(async function test_getPermissions() {
 });
 
 /**
+ * Tests that the file picker opens in the Safari folder, so that it can be
+ * selected right away.
+ */
+add_task(async function test_filePickerStartsInSafariFolder() {
+  let sandbox = sinon.createSandbox();
+  registerCleanupFunction(() => {
+    sandbox.restore();
+  });
+
+  let migrator = new SafariProfileMigrator();
+  sandbox.stub(migrator, "hasPermissions").resolves(false);
+
+  let displayDirectoryPath;
+  MockFilePicker.showCallback = () => {
+    displayDirectoryPath = MockFilePicker.displayDirectory?.path;
+  };
+  MockFilePicker.returnValue = MockFilePicker.returnCancel;
+  Assert.ok(
+    !(await migrator.getPermissions()),
+    "Should report that we didn't get permissions."
+  );
+  Assert.equal(
+    displayDirectoryPath,
+    gDataDir,
+    "File picker should open in the Safari folder."
+  );
+
+  sandbox.restore();
+});
+
+/**
  * Tests that if the platform blocks reading the Safari folder until the
  * user selects it in the file picker, we don't read anything in it before
  * that selection, and that history is still offered for import.
