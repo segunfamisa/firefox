@@ -5,8 +5,8 @@
 "use strict";
 
 /* exported addPdfStructTreeTest, addPdfOutlineTest, addPdfTabTask,
-   loadPdfTestDoc, exportPdf, assertPdfStructTree, PDF_TEST_FONT_STYLE,
-   assertPdfUsesTestFont, CommonUtils */
+   loadPdfTestDoc, exportPdf, assertPdfStructTree, getPdfText,
+   PDF_TEST_FONT_STYLE, assertPdfUsesTestFont, CommonUtils */
 
 // Prevent common.js from instantiating the accessibility service when it is
 // loaded. These tests need to start with the accessibility service disabled.
@@ -289,6 +289,50 @@ async function assertPdfStructTree(pdf, pageTrees) {
       `Page ${pageNum} struct tree correct`
     );
   }
+}
+
+/**
+ * Get the text on the first page of `pdf`, excluding artifacts such as headers
+ * and footers. The result contains a string for each top level marked content
+ * sequence, as well as each run of text outside marked content. The strings in
+ * a sequence are joined, including those in nested sequences, since pdf.js can
+ * split text into several items depending on how the glyphs are positioned.
+ * Empty strings are omitted.
+ */
+async function getPdfText(pdf) {
+  const page = await pdf.getPage(1);
+  const items = (await page.getTextContent({ includeMarkedContent: true }))
+    .items;
+  const texts = [];
+  let depth = 0;
+  let isArtifact = false;
+  let text = "";
+  const flush = () => {
+    if (!isArtifact && text) {
+      texts.push(text);
+    }
+    text = "";
+  };
+  for (const item of items) {
+    if (
+      item.type == "beginMarkedContent" ||
+      item.type == "beginMarkedContentProps"
+    ) {
+      if (depth++ == 0) {
+        flush();
+        isArtifact = item.tag == "Artifact";
+      }
+    } else if (item.type == "endMarkedContent") {
+      if (--depth == 0) {
+        flush();
+        isArtifact = false;
+      }
+    } else if (item.str) {
+      text += item.str;
+    }
+  }
+  flush();
+  return texts;
 }
 
 /**
