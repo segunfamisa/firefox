@@ -11845,3 +11845,8 @@ pub unsafe extern "C" fn Servo_GetComputationSteps(
 pub extern "C" fn Servo_TextTransform_Case(text_transform: TextTransform) -> TextTransformCase {
     text_transform.case()
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn Servo_RuleType_Supports_Declarations(rule_type: CssRuleType) -> bool {
+    CssRuleTypes::from_bits(rule_type.bit()).allows_declarations()
+}
