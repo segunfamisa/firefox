@@ -3726,6 +3726,15 @@ pref("browser.privatebrowsing.resetPBM.enabled", true);
 // performing the clear action.
 pref("browser.privatebrowsing.resetPBM.showConfirmationDialog", true);
 
+// Whether the fire button, which clears the current browsing session and
+// replaces all open windows with a fresh one, is registered as a navbar
+// widget. Read once at startup, so a change only takes effect on restart.
+pref("browser.fireButton.enabled", false);
+
+// Which flow the fire button starts. "panel" shows the confirmation panel;
+// "direct" skips it and opens the clear browsing data dialog straight away.
+pref("browser.fireButton.flow", "panel");
+
 // the preferences related to the Nimbus experiment, to activate and deactivate
 // the the entire rollout (see: bug 1864216 - two prompts, 1877500 - set two in one prompt)
 pref("browser.mailto.dualPrompt", false);
