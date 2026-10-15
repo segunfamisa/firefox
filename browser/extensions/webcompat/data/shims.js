@@ -960,6 +960,28 @@ const AVAILABLE_SHIMS = [
     unblocksOnOptIn: ["*://*.disqus.com/*", "*://*.disquscdn.com/*"],
   },
   {
+    id: "SendToNewsEmbed",
+    platform: "desktop",
+    name: "SendToNews embed placeholder",
+    bug: "1945659",
+    runFirst: "sendtonews-embed.js",
+    // Blank stub file just so we run the script above when the matched script
+    // files get blocked.
+    file: "empty-script.js",
+    matches: ["*://*.sendtonews.com/player3/embedcode.js*"],
+    logos: ["video-embed.svg"],
+    webExposedShimHelpers: [],
+    needsShimHelpers: [
+      "embedClicked",
+      "smartblockEmbedReplaced",
+      "smartblockGetFluentString",
+      "shouldShowEmbedContentInPlaceholders",
+    ],
+    isSmartblockEmbedShim: true,
+    onlyIfBlockedByETP: true,
+    unblocksOnOptIn: ["*://*.sendtonews.com/*"],
+  },
+  {
     id: "FingerpringJSBotd",
     platform: "all",
     name: "FingerprintJS Bot Detection",
