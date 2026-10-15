@@ -1590,6 +1590,7 @@ class GeneratedFile(ContextDerived):
                 ".asm",
                 ".c",
                 ".cpp",
+                ".dat",  # ICU data, read by icu_data.S via .incbin
                 ".inc",
                 ".m",
                 ".mm",
