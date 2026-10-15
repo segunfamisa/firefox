@@ -27,9 +27,7 @@ function addSourceTextTest(testName, markup, expected) {
         SimpleTest.isDeeply(texts, expected, "PDF text correct");
       }
     },
-    // Glyph source text isn't yet plumbed through DrawTargetRecording, so only
-    // test documents which are drawn in the parent process.
-    { chrome: true, topLevel: false }
+    { chrome: true, topLevel: true, remoteIframe: true }
   );
 }
 
