@@ -22,13 +22,6 @@ async function getFieldValues(browser, properties) {
 }
 
 add_setup(async function () {
-  // The Rust credit card schema has no column for the security code, so a card
-  // saved while that store serves comes back without one and there is nothing
-  // below to test. rustCreditCard/browser.toml includes this directory
-  // wholesale, so the skip lives here rather than in a manifest.
-  if (RUST_CREDIT_CARD_STORE) {
-    return;
-  }
   // head.js force-enables OS auth for this directory, which would make filling
   // the card number block on a reauth prompt. Reauth is not what this file
   // tests, so revert the stub and turn it off.
@@ -42,7 +35,10 @@ add_setup(async function () {
   // The feature is gated on rollout as well as on the user's own choice. Roll
   // it out for the whole file so each task can toggle the enabled pref alone.
   await SpecialPowers.pushPrefEnv({
-    set: [["extensions.formautofill.creditCards.cvv.supported", "on"]],
+    set: [
+      ["extensions.formautofill.creditCards.cvv.supported", "on"],
+      ["extensions.formautofill.creditCards.cvv.enabled", true],
+    ],
   });
 
   await removeAllRecords();
@@ -50,28 +46,23 @@ add_setup(async function () {
 });
 
 add_task(async function test_csc_round_trips_through_storage() {
-  if (RUST_CREDIT_CARD_STORE) {
-    info("The Rust store does not hold a security code");
-    return;
-  }
   const cards = await getCreditCards();
   is(cards.length, 1, "One credit card is saved");
   is(cards[0]["cc-csc"], "123", "cc-csc survives the storage round trip");
 
-  const savedFieldNames = Services.ppmm.sharedData.get(
-    "FormAutofill:savedFieldNames"
-  );
-  ok(
-    savedFieldNames.has("cc-csc"),
+  // The saved field names are recomputed after the storage change setStorage
+  // waits for, not before it.
+  await TestUtils.waitForCondition(
+    () =>
+      Services.ppmm.sharedData
+        .get("FormAutofill:savedFieldNames")
+        ?.has("cc-csc"),
     "A stored cc-csc reaches savedFieldNames with no special casing"
   );
+  ok(true, "A stored cc-csc reaches savedFieldNames with no special casing");
 });
 
 add_task(async function test_no_cvv_when_pref_disabled() {
-  if (RUST_CREDIT_CARD_STORE) {
-    info("The Rust store does not hold a security code");
-    return;
-  }
   await SpecialPowers.pushPrefEnv({
     set: [["extensions.formautofill.creditCards.cvv.enabled", false]],
   });
@@ -120,10 +111,6 @@ add_task(async function test_no_cvv_when_pref_disabled() {
 });
 
 add_task(async function test_cvv_autofills_when_pref_enabled() {
-  if (RUST_CREDIT_CARD_STORE) {
-    info("The Rust store does not hold a security code");
-    return;
-  }
   await SpecialPowers.pushPrefEnv({
     set: [["extensions.formautofill.creditCards.cvv.enabled", true]],
   });
@@ -166,10 +153,6 @@ add_task(async function test_cvv_autofills_when_pref_enabled() {
 });
 
 add_task(async function test_cvv_entry_is_named_after_the_field() {
-  if (RUST_CREDIT_CARD_STORE) {
-    info("The Rust store does not hold a security code");
-    return;
-  }
   await SpecialPowers.pushPrefEnv({
     set: [["extensions.formautofill.creditCards.cvv.enabled", true]],
   });
@@ -193,4 +176,26 @@ add_task(async function test_cvv_entry_is_named_after_the_field() {
   );
 
   await SpecialPowers.popPrefEnv();
+});
+
+add_task(async function test_saved_field_names_follow_turning_cvv_on() {
+  const { FormAutofillStatus } = ChromeUtils.importESModule(
+    "resource://autofill/FormAutofillParent.sys.mjs"
+  );
+  const savedFieldNames = () =>
+    Services.ppmm.sharedData.get("FormAutofill:savedFieldNames");
+
+  // Saved field names computed while CVV is off, as any storage change then
+  // would compute them.
+  await SpecialPowers.pushPrefEnv({
+    set: [["extensions.formautofill.creditCards.cvv.enabled", false]],
+  });
+  await FormAutofillStatus.updateSavedFieldNames();
+  await SpecialPowers.popPrefEnv();
+
+  await TestUtils.waitForCondition(
+    () => savedFieldNames()?.has("cc-csc"),
+    "Turning CVV on offers the stored security code"
+  );
+  ok(true, "Turning CVV on offers the stored security code");
 });
