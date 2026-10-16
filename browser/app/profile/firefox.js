@@ -562,6 +562,10 @@ pref("browser.urlbar.temporal.featureGate", false);
 // temporal search suggestions are turned on.
 pref("browser.urlbar.suggest.temporal", true);
 
+// If `browser.urlbar.suggest.temporal` is true, this controls whether seasonal
+// temporal search suggestions are shown.
+pref("browser.urlbar.suggest.temporal.seasonal", true);
+
 // Whether results that are part of the Firefox Suggest brand are shown in the
 // urlbar. This pref is exposed to the user in the UI, and it's sticky so that
 // its user-branch value persists regardless of whatever Firefox Suggest
