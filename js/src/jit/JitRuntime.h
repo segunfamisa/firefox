@@ -148,6 +148,9 @@ class JitRuntime {
   // Thunk that invalides an (Ion compiled) caller on the Ion stack.
   WriteOnceData<uint32_t> invalidatorOffset_{0};
 
+  // Shared handler for Baseline debug-mode OSR.
+  WriteOnceData<uint32_t> baselineDebugModeOSRHandlerOffset_{0};
+
   // Thunk that calls the GC pre barrier.
   WriteOnceData<uint32_t> valuePreBarrierOffset_{0};
   WriteOnceData<uint32_t> stringPreBarrierOffset_{0};
@@ -275,6 +278,7 @@ class JitRuntime {
 
   void generateBailoutHandler(MacroAssembler& masm, Label* bailoutTail);
   void generateInvalidator(MacroAssembler& masm, Label* bailoutTail);
+  void generateBaselineDebugModeOSRHandler(MacroAssembler& masm);
   uint32_t generatePreBarrier(JSContext* cx, MacroAssembler& masm,
                               MIRType type);
   void generateIonGenericCallStub(MacroAssembler& masm,
@@ -413,6 +417,10 @@ class JitRuntime {
 
   TrampolinePtr getInvalidationThunk() const {
     return trampolineCode(invalidatorOffset_);
+  }
+
+  TrampolinePtr getBaselineDebugModeOSRHandler() const {
+    return trampolineCode(baselineDebugModeOSRHandlerOffset_);
   }
 
   EnterJitCode enterJit() const {
