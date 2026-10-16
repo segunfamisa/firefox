@@ -4809,8 +4809,8 @@ struct MOZ_STACK_CLASS CanvasBidiProcessor final
     : public nsBidiPresUtils::BidiProcessor {
   using Style = CanvasRenderingContext2D::Style;
 
-  explicit CanvasBidiProcessor(gfx::FontPaletteValueSet* aPaletteValueSet)
-      : mPaletteValueSet(aPaletteValueSet) {
+  explicit CanvasBidiProcessor(mozilla::gfx::PaletteCache& aPaletteCache)
+      : mPaletteCache(aPaletteCache) {
     if (StaticPrefs::gfx_missing_fonts_notify()) {
       mMissingFonts = MakeUnique<gfxMissingFontRecorder>();
     }
@@ -5060,7 +5060,7 @@ struct MOZ_STACK_CLASS CanvasBidiProcessor final
     }
 
     gfxContext thebes(target, /* aPreserveTransform */ true);
-    gfxTextRun::DrawParams params(&thebes, mPaletteValueSet);
+    gfxTextRun::DrawParams params(&thebes, mPaletteCache);
 
     params.allowGDI = false;
 
@@ -5125,14 +5125,14 @@ struct MOZ_STACK_CLASS CanvasBidiProcessor final
   // Pointer to the draw target we should fill our text to
   CanvasRenderingContext2D* mCtx = nullptr;
 
-  // palette-values set from the presContext, if any.
-  gfx::FontPaletteValueSet* mPaletteValueSet = nullptr;
-
   // position of the left side of the string, alphabetic baseline
   gfx::Point mPt;
 
   // current font
   gfxFontGroup* mFontgrp = nullptr;
+
+  // palette cache for COLR font rendering
+  mozilla::gfx::PaletteCache& mPaletteCache;
 
   // spacing adjustments to be applied
   gfx::Float mLetterSpacing = 0.0f;
@@ -5256,9 +5256,7 @@ UniquePtr<TextMetrics> CanvasRenderingContext2D::DrawOrMeasureText(
     return nullptr;
   }
 
-  auto* paletteValueSet =
-      presContext ? presContext->GetFontPaletteValueSet() : nullptr;
-  CanvasBidiProcessor processor(paletteValueSet);
+  CanvasBidiProcessor processor(mPaletteCache);
 
   // If we don't have a ComputedStyle, we can't set up vertical-text flags
   // (for now, at least; perhaps we need new Canvas API to control this).
