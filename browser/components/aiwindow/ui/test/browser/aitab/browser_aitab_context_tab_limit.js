@@ -65,7 +65,7 @@ describe("when selecting URLs to build an AITab", () => {
 
   afterEach(async () => {
     gSandbox.restore();
-    gMockEngineManager.rejectAllRequests();
+    await gMockEngineManager.rejectAllRequests();
     gMockEngineManager.cleanupMocks();
     gRestoreSignIn();
     await BrowserTestUtils.closeWindow(gWin);
