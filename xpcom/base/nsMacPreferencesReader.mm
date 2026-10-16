@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsMacPreferencesReader.h"
-#include "MacStringHelpers.h"
 #include "CFTypeRefPtr.h"
+#include "MacStringHelpers.h"
 #include "nsString.h"
 
 #include <sys/stat.h>
