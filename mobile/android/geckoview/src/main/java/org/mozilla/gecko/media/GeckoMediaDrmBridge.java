@@ -11,7 +11,9 @@ import android.media.NotProvisionedException;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
+import androidx.annotation.VisibleForTesting;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -35,7 +37,7 @@ public class GeckoMediaDrmBridge implements GeckoMediaDrm {
   private static final boolean DEBUG = false;
   private static final UUID WIDEVINE_SCHEME_UUID =
       new UUID(0xedef8ba979d64aceL, 0xa3c827dcd51d21edL);
-  private static final int MAX_PROMISE_ID = Integer.MAX_VALUE;
+  @VisibleForTesting static final int MAX_PROMISE_ID = Integer.MAX_VALUE;
 
   public static final Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -131,7 +133,7 @@ public class GeckoMediaDrmBridge implements GeckoMediaDrm {
 
     // The caller of GeckoMediaDrmBridge ctor should handle exceptions
     // threw by the following steps.
-    mDrm = new MediaDrm(mSchemeUUID);
+    mDrm = createMediaDrm(mSchemeUUID);
     configureVendorSpecificProperty();
     mDrm.setOnEventListener(new MediaDrmListener());
     mDrm.setOnKeyStatusChangeListener(new KeyStatusChangeListener(), null);
@@ -143,6 +145,11 @@ public class GeckoMediaDrmBridge implements GeckoMediaDrm {
       if (DEBUG) Log.d(LOGTAG, "Device not provisioned:" + e.getMessage());
       startProvisioning(MAX_PROMISE_ID);
     }
+  }
+
+  @VisibleForTesting
+  MediaDrm createMediaDrm(final UUID schemeUUID) throws android.media.UnsupportedSchemeException {
+    return new MediaDrm(schemeUUID);
   }
 
   @Override
@@ -651,6 +658,11 @@ public class GeckoMediaDrmBridge implements GeckoMediaDrm {
     } catch (final Exception e) {
       Log.e(LOGTAG, "Got exception during processPendingCreateSessionData ...", e);
     }
+  }
+
+  @VisibleForTesting
+  Looper getPendingOpsLooper() {
+    return mHandlerThread == null ? null : mHandlerThread.getLooper();
   }
 
   private void resumePendingOperations() {
