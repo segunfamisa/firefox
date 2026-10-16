@@ -11,6 +11,10 @@ var { setTimeout } = ChromeUtils.importESModule(
 );
 
 add_setup(async function () {
+  // Enabling the outer proxy connection through Happy Eyeballs requires both
+  // the main Happy Eyeballs pref and the proxy-specific rollout pref.
+  Services.prefs.setBoolPref("network.http.happy_eyeballs_enabled", true);
+  Services.prefs.setBoolPref("network.http.happy_eyeballs_proxy_enabled", true);
   Services.prefs.setIntPref("network.http.speculative-parallel-limit", 20);
 
   await setup_http3_proxy();
@@ -36,7 +40,11 @@ async function closeAllConnections() {
   await new Promise(resolve => setTimeout(resolve, 1000));
 }
 
-add_task(async function test_http_connect_fallback() {
+// Inner-connection protocol fallback (origin served over HTTP/HTTPS/HTTP2)
+// while tunneling through the proxy. Named distinctly so it does not shadow the
+// common test_http_connect_fallback added above (which exercises outer-proxy
+// no-response fallback); both need to run.
+add_task(async function test_inner_connection_fallback_all() {
   for (const ServerClass of [
     NodeHTTPServer,
     NodeHTTPSServer,
