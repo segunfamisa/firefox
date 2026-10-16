@@ -8434,7 +8434,8 @@ nsMargin nsLayoutUtils::ScrollbarAreaToExcludeFromCompositionBoundsFor(
 
 /* static */
 nsSize nsLayoutUtils::CalculateCompositionSizeForFrame(
-    nsIFrame* aFrame, const nsSize* aOverrideScrollPortSize,
+    nsIFrame* aFrame, bool aSubtractScrollbars,
+    const nsSize* aOverrideScrollPortSize,
     IncludeDynamicToolbar aIncludeDynamicToolbar) {
   // If we have a scroll container frame, restrict the composition bounds to its
   // scroll port. The scroll port excludes the frame borders and the scroll
@@ -8459,6 +8460,12 @@ nsSize nsLayoutUtils::CalculateCompositionSizeForFrame(
       size = nsSize(compBounds.width * auPerDevPixel,
                     compBounds.height * auPerDevPixel);
     }
+  }
+
+  if (aSubtractScrollbars) {
+    nsMargin margins = ScrollbarAreaToExcludeFromCompositionBoundsFor(aFrame);
+    size.width -= margins.LeftRight();
+    size.height -= margins.TopBottom();
   }
 
   return size;
@@ -8515,6 +8522,20 @@ CSSSize nsLayoutUtils::CalculateBoundingCompositionSize(
         widgetBounds.Size(),
         PixelCastJustification::LayoutDeviceIsScreenForBounds));
   }
+
+  // Adjust composition size for the size of scroll bars.
+  nsIFrame* rootRootScrollContainerFrame =
+      rootPresShell && !isPopupRoot
+          ? rootPresShell->GetRootScrollContainerFrame()
+          : nullptr;
+  nsMargin scrollbarMargins = ScrollbarAreaToExcludeFromCompositionBoundsFor(
+      rootRootScrollContainerFrame);
+  LayoutDeviceMargin margins = LayoutDeviceMargin::FromAppUnits(
+      scrollbarMargins, rootPresContext->AppUnitsPerDevPixel());
+  // Scrollbars are not subject to resolution scaling, so LD pixels = layer
+  // pixels for them.
+  rootCompositionSize.width -= margins.LeftRight();
+  rootCompositionSize.height -= margins.TopBottom();
 
   CSSSize result =
       rootCompositionSize / aMetrics.DisplayportPixelsPerCSSPixel();

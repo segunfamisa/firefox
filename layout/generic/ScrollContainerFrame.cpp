@@ -757,8 +757,8 @@ bool ScrollContainerFrame::TryLayout(ScrollReflowInput& aState,
   // That case also happens to have no APZ and no MVM, so we use that as a
   // way to detect the scenario. Bug 1648669 tracks removing this clause.
   if (mIsRoot && presShell->GetMobileViewportManager()) {
-    visualViewportSize =
-        nsLayoutUtils::CalculateCompositionSizeForFrame(this, &layoutSize);
+    visualViewportSize = nsLayoutUtils::CalculateCompositionSizeForFrame(
+        this, false, &layoutSize);
     visualViewportSize =
         Max(nsSize(0, 0), visualViewportSize - scrollbarGutterSize);
 
@@ -4067,33 +4067,26 @@ void ScrollContainerFrame::BuildDisplayList(nsDisplayListBuilder* aBuilder,
   // the corners where we have a scrollbar.
   nsRectCornerRadii radii;
   const bool haveRadii = GetPaddingBoxBorderRadii(radii);
-  if (isRootContent) {
-    const nsSize compositionSize =
-        nsLayoutUtils::CalculateCompositionSizeForFrame(
-            this, nullptr /* aOverrideScrollPortSize */,
-            // With the dynamic toolbar, this CalculateCompositionSizeForFrame
-            // call basically expands the region being covered up by the dynamic
-            // toolbar, but if the root scroll container is not scrollable, e.g.
-            // the root element has `overflow: hidden` or `position: fixed`, the
-            // function doesn't expand the region since expanding the region in
-            // such cases will prevent the content from restoring zooming to 1.0
-            // zoom level such as bug 1652190. That said, this `clipRect` which
-            // will be used for the async zoom container needs to be expanded
-            // because zoomed-in contents can be scrollable __visually__ so that
-            // the region under the dynamic toolbar area will be revealed.
-            nsLayoutUtils::IncludeDynamicToolbar::Force);
-    // The composition bounds include the area under the root scrollbars, which
-    // are painted on top of the content if non-overlay. Intersect them with the
-    // layout viewport so that zoomed-in content can be seen under non-opaque
-    // scrollbars, but content outside of it can't.
-    clipRect = nsRect(aBuilder->ToReferenceFrame(this), compositionSize);
-    clipRect = clipRect.Intersect(
-        ViewportUtils::LayoutToVisual(scrollPortClip, PresShell()));
+  if (mIsRoot) {
+    clipRect.SizeTo(nsLayoutUtils::CalculateCompositionSizeForFrame(
+        this, true /* aSubtractScrollbars */,
+        nullptr /* aOverrideScrollPortSize */,
+        // With the dynamic toolbar, this CalculateCompositionSizeForFrame call
+        // basically expands the region being covered up by the dynamic toolbar,
+        // but if the root scroll container is not scrollable, e.g. the root
+        // element has `overflow: hidden` or `position: fixed`, the function
+        // doesn't expand the region since expanding the region in such cases
+        // will prevent the content from restoring zooming to 1.0 zoom level
+        // such as bug 1652190. That said, this `clipRect` which will be used
+        // for the async zoom container needs to be expanded because zoomed-in
+        // contents can be scrollable __visually__ so that the region under the
+        // dynamic toolbar area will be revealed.
+        nsLayoutUtils::IncludeDynamicToolbar::Force));
 
     // The composition size is essentially in visual coordinates.
     // If we are hit-testing in layout coordinates, transform the clip rect
     // to layout coordinates to match.
-    if (aBuilder->IsRelativeToLayoutViewport()) {
+    if (aBuilder->IsRelativeToLayoutViewport() && isRootContent) {
       clipRect = ViewportUtils::VisualToLayout(clipRect, PresShell());
     }
   }
@@ -6793,8 +6786,8 @@ void ScrollContainerFrame::LayoutScrollbars(ScrollReflowInput& aState,
 
   nsSize compositionSize = mScrollPort.Size();
   if (overlayScrollBarsOnRoot) {
-    compositionSize =
-        nsLayoutUtils::CalculateCompositionSizeForFrame(this, &compositionSize);
+    compositionSize = nsLayoutUtils::CalculateCompositionSizeForFrame(
+        this, false, &compositionSize);
   }
 
   nsPresContext* presContext = mScrolledFrame->PresContext();
