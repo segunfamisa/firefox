@@ -3818,6 +3818,8 @@ pref("browser.ipProtection.userEnabled", false);
 pref("browser.ipProtection.userEnableCount", 0);
 // Pref to track if user has ever opened the VPN panel
 pref("browser.ipProtection.everOpenedPanel", false);
+// Pref to track if the user has opened the panel since release 160
+pref("browser.ipProtection.openedPanelSince160", false);
 // Pref to track if the VPN UI has ever been exposed to the user. Once it is
 // true the UI is shown regardless of the l10n coverage of
 // browser/ipProtection.ftl. A profile data upgrade sets it to true on profiles
