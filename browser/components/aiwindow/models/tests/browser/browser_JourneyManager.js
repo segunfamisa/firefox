@@ -377,6 +377,7 @@ add_setup(async function setupSemanticUrlResolutionTests() {
     await semanticManager?.shutdown();
     Services.prefs.clearUserPref("places.semanticHistory.initialized");
     await SpecialPowers.popPrefEnv();
+    getPlacesSemanticHistoryManager({}, true);
   });
 
   await SpecialPowers.pushPrefEnv({
