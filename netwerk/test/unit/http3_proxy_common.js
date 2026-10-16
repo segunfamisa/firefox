@@ -501,9 +501,6 @@ async function test_inner_connection_fallback(ServerClass) {
   // Register the connect-udp proxy.
   pps.registerFilter(proxyFilter, 10);
 
-  let httpsProxy = new NodeHTTP2ProxyServer();
-  await httpsProxy.startWithoutProxyFilter(proxyPort);
-
   // The H3 attempt must get no response while the TCP fallback reaches server.
   let server = new ServerClass();
   await server.startWithNoResponseUdpPort();
@@ -525,7 +522,6 @@ async function test_inner_connection_fallback(ServerClass) {
   });
   registerCleanupFunction(async () => {
     await server.stop();
-    await httpsProxy.stop();
   });
 
   Services.prefs.setCharPref(
@@ -551,7 +547,6 @@ async function test_inner_connection_fallback(ServerClass) {
     Assert.equal(buf, `fallback${i + 1}`);
   }
   await server.stop();
-  await httpsProxy.stop();
 
   pps.unregisterFilter(proxyFilter);
 }
