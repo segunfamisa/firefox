@@ -169,6 +169,20 @@ function getPopupNotificationNode() {
   return popupNotifications[0];
 }
 
+/**
+ * Disable non-release page actions (that are tested elsewhere).
+ *
+ * @return void
+ */
+async function disableNonReleaseActions() {
+  if (!["release", "esr"].includes(AppConstants.MOZ_UPDATE_CHANNEL)) {
+    SpecialPowers.Services.prefs.setBoolPref(
+      "extensions.webcompat-reporter.enabled",
+      false
+    );
+  }
+}
+
 function assertActivatedPageActionPanelHidden() {
   Assert.ok(
     !document.getElementById(BrowserPageActions._activatedActionPanelID)
