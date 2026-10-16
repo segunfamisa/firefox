@@ -119,6 +119,7 @@ static bool CollectJitStackScripts(JSContext* cx,
           uint8_t* retAddr = frame.resumePCinCurrentFrame();
           const RetAddrEntry& retAddrEntry =
               script->baselineScript()->retAddrEntryFromReturnAddress(retAddr);
+          MOZ_ASSERT(CanTriggerBaselineDebugModeOSR(retAddrEntry.kind()));
           if (!entries.emplaceBack(script, retAddrEntry)) {
             return false;
           }
