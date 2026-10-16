@@ -140,6 +140,95 @@ const TEST_MODEL_DATA = {
   },
 };
 
+add_task(function test_locationVectorEligibility() {
+  const feed = InferredPersonalizationFeed.prototype;
+  for (const hasClicks of [false, true]) {
+    for (const topicValue of [0, 1]) {
+      equal(
+        feed.computeShouldUseLocationVector(hasClicks, { arts: topicValue }),
+        !(hasClicks && topicValue > 0),
+        `Location fallback for clicks=${hasClicks}, topic=${topicValue}`
+      );
+    }
+  }
+  ok(
+    feed.computeShouldUseLocationVector(true, {
+      clicks: 3,
+      timeZoneOffset: 2,
+      model_id: 1,
+      arts: 0,
+    }),
+    "Click category, time zone, and metadata do not qualify as topic interests"
+  );
+  ok(
+    feed.computeShouldUseLocationVector(true),
+    "Missing coarse interests retain the location fallback"
+  );
+});
+
+add_task(function test_locationInitializationPrefGate() {
+  const feed = Object.create(InferredPersonalizationFeed.prototype);
+  const prefs = {};
+  feed.store = { getState: () => ({ Prefs: { values: prefs } }) };
+  const model = {
+    computeLocationInterestVector: sinon.stub().returns({ arts: 0, clicks: 3 }),
+    supportsCoarsePrivateInterests: sinon.stub().returns(true),
+    computePrivateLocationInterestVector: sinon
+      .stub()
+      .returns({ arts: "100", clicks: "0001" }),
+  };
+  const options = {
+    model,
+    modelId: "test-model",
+    clickDataPerInterval: [[["click", 0, 1]]],
+    indexSchema: { feature: 0, feature_value: 2 },
+    coarseInferredInterests: { arts: 1 },
+  };
+
+  feed.updateLocationInterestVectors(options);
+  ok(model.computeLocationInterestVector.notCalled, "Disabled by default");
+  ok(!feed.shouldUseLocationVector, "Disabled location fallback is false");
+
+  prefs.trainhopConfig = { locationInitInferred: { enabled: true } };
+  feed.updateLocationInterestVectors(options);
+  ok(
+    model.computeLocationInterestVector.notCalled,
+    "Qualifying engagement skips calculation"
+  );
+  ok(
+    model.computePrivateLocationInterestVector.notCalled,
+    "Qualifying engagement skips privacy"
+  );
+  ok(!feed.shouldUseLocationVector, "Qualifying engagement ends fallback");
+
+  feed.updateLocationInterestVectors({
+    ...options,
+    clickDataPerInterval: [[]],
+  });
+  deepEqual(feed.locationInterestVector, { arts: 0, clicks: 3 });
+  deepEqual(feed.locationPrivateInferredInterests, {
+    values: ["100", "0001"],
+    model_id: "test-model",
+  });
+  ok(feed.shouldUseLocationVector, "Without clicks, retain location fallback");
+
+  prefs.trainhopConfig.locationInitInferred.enabled = false;
+  model.computeLocationInterestVector.resetHistory();
+  model.computePrivateLocationInterestVector.resetHistory();
+  feed.updateLocationInterestVectors(options);
+  ok(
+    model.computeLocationInterestVector.notCalled,
+    "Disabled skips calculation"
+  );
+  ok(
+    model.computePrivateLocationInterestVector.notCalled,
+    "Disabled skips privacy"
+  );
+  equal(feed.locationInterestVector, null, "Clears previous location vector");
+  equal(feed.locationPrivateInferredInterests, null, "Clears private vector");
+  ok(!feed.shouldUseLocationVector, "Clears previous fallback flag");
+});
+
 add_task(
   async function test_getDebuggingInterestFeaturesSupported_noModelData() {
     const sandbox = sinon.createSandbox();
