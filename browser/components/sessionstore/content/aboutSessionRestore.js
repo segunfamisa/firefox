@@ -231,7 +231,7 @@ function restoreSession() {
   }
 
   // restore the session into a new window and close the current tab
-  var newWindow = /** @type {BrowserWindow} */ (
+  var newWindow = /** @type {ChromeWindow} */ (
     top.openDialog(top.location.href, "_blank", "chrome,dialog=no,all")
   );
 
@@ -325,10 +325,10 @@ function getTryAgainButton() {
 }
 
 /**
- * @returns {BrowserWindow}
+ * @returns {ChromeWindow}
  */
 function getBrowserWindow() {
-  return /** @type {BrowserWindow} */ (
+  return /** @type {ChromeWindow} */ (
     /** @type {CanonicalBrowsingContext} */ (window.browsingContext)
       .topChromeWindow
   );
@@ -427,7 +427,7 @@ function toggleRowChecked(aIx) {
 function restoreSingleTab(aIx, aShifted) {
   gSingleTabsRestored++;
   var tabbrowser = getBrowserWindow().gBrowser;
-  var newTab = tabbrowser.addWebTab("about:blank");
+  var newTab = tabbrowser.addWebTab();
   var item = gTreeData[aIx];
 
   var tabState =
