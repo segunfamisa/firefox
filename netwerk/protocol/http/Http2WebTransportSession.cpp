@@ -74,7 +74,18 @@ void Http2WebTransportSessionImpl::CloseSession(uint32_t aStatus,
 
 uint64_t Http2WebTransportSessionImpl::GetStreamId() const { return mStreamId; }
 
-void Http2WebTransportSessionImpl::GetMaxDatagramSize() {}
+void Http2WebTransportSessionImpl::GetMaxDatagramSize() {
+  // HTTP/2 WebTransport (draft-ietf-webtrans-http2) has no equivalent limit
+  // to HTTP/3's max_datagram_size; report back the implementation-defined
+  // default (see WebTransportDatagramDuplexStream.h's mOutgoingMaxDataSize)
+  // instead of leaving the caller's value at its default-constructed 0,
+  // which would make every future writeDatagrams()/sendDatagrams() call
+  // silently no-op forever (spec: "If OutgoingMaxDatagramSize is less than
+  // data's length, return a promise resolved with undefined").
+  if (RefPtr<WebTransportSessionEventListener> listener = GetListener()) {
+    listener->OnMaxDatagramSize(1024);
+  }
+}
 
 nsresult Http2WebTransportSessionImpl::ExportKeyingMaterial(
     const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
