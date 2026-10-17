@@ -270,18 +270,13 @@ bool CanvasRenderingContextHelper::UpdateContext(
   // Only set options if updated during creation.
   nsresult rv = aOptions ? currentContext->SetContextOptions(*aOptions) : NS_OK;
   if (NS_FAILED(rv)) {
-    if (mCurrentContext == currentContext) {
-      mCurrentContext = nullptr;
-    }
+    mCurrentContext = nullptr;
     return false;
   }
 
   rv = currentContext->SetDimensions(sz.width, sz.height);
   if (NS_FAILED(rv)) {
-    // SetDimensions may run script that replaces the context.
-    if (mCurrentContext == currentContext) {
-      mCurrentContext = nullptr;
-    }
+    mCurrentContext = nullptr;
     return false;
   }
 
