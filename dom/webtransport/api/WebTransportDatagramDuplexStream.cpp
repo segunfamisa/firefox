@@ -138,23 +138,21 @@ WebTransportDatagramDuplexStream::CreateWritable(
     return nullptr;
   }
 
-  // Step 2: If transport.[[State]] is "closed" or "failed", throw an
+  // Step 2: Let sendGroup be options["sendGroup"].
+  // Step 3: If sendGroup is not null, and sendGroup.[[Transport]] is not
+  // this.[[Transport]], throw a TypeError.
+  if (aOptions.mSendGroup &&
+      aOptions.mSendGroup->GetTransport() != mWebTransport) {
+    aRv.ThrowTypeError("sendGroup does not belong to the same WebTransport");
+    return nullptr;
+  }
+
+  // Step 4: If transport.[[State]] is "closed" or "failed", throw an
   // InvalidStateError.
   auto state = mWebTransport->mState;
   if (state == WebTransport::WebTransportState::CLOSED ||
       state == WebTransport::WebTransportState::FAILED) {
     aRv.ThrowInvalidStateError("WebTransport closed or failed");
-    return nullptr;
-  }
-
-  // Step 3: Let sendGroup be options["sendGroup"]
-
-  // Step 4: If sendGroup is not null, and sendGroup.[[Transport]] is not
-  // transport, throw an InvalidStateError.
-  if (aOptions.mSendGroup &&
-      aOptions.mSendGroup->GetTransport() != mWebTransport) {
-    aRv.ThrowInvalidStateError(
-        "sendGroup does not belong to the same WebTransport");
     return nullptr;
   }
 
