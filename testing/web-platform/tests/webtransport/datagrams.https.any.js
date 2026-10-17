@@ -283,20 +283,30 @@ promise_test(async t => {
   const writer = wt.datagrams.createWritable().getWriter();
   const encoder = new TextEncoder();
 
-  // Write N-1 datagrams synchronously — should not trigger backpressure.
-  for (let i = 0; i < N - 1; i++) {
-    writer.write(encoder.encode(i.toString()));
+  // The writable keeps the default highWaterMark (1); outgoingMaxBufferedDatagrams
+  // only makes writeDatagrams withhold the write promise once the queue
+  // reaches it: https://w3c.github.io/webtransport/#writedatagrams
+  assert_equals(writer.desiredSize, 1,
+                'outgoing datagrams writable uses the default highWaterMark (1)');
+
+  const settled = [];
+  const writes = [];
+  for (let i = 0; i < N; i++) {
+    writes.push(writer.write(encoder.encode(i.toString()))
+                    .then(() => { settled[i] = true; }));
   }
-  assert_greater_than(writer.desiredSize, 0,
-                      'desiredSize should be positive after N-1 writes');
 
-  // Write the Nth datagram — should trigger backpressure.
-  writer.write(encoder.encode((N - 1).toString()));
-  assert_less_than_equal(writer.desiredSize, 0,
-                         'desiredSize should be non-positive after N writes');
+  // Drain microtasks without yielding a task, so the datagrams cannot have
+  // left the queue yet.
+  for (let i = 0; i < 50; i++) {
+    await Promise.resolve();
+  }
+  assert_array_equals(settled.slice(0, N - 1), new Array(N - 1).fill(true),
+                      'writes below the limit resolve promptly');
+  assert_equals(settled[N - 1], undefined,
+                'the write that reaches the limit is withheld');
 
-  // Backpressure should eventually lift as datagrams drain.
-  await writer.ready;
+  await Promise.all(writes);
 }, "Datagram's outgoingMaxBufferedDatagrams correctly regulates written datagrams");
 
 promise_test(async t => {
@@ -333,6 +343,11 @@ promise_test(async t => {
     if (result === undefined) break;
     receivedSequenceNumbers.push(parseInt(decoder.decode(result.value)));
   }
+
+  // Check that at least some datagrams were actually delivered, so a
+  // regression that breaks delivery entirely doesn't vacuously pass the
+  // checks below (Math.min(...[]) is Infinity, which satisfies both).
+  assert_greater_than(receivedSequenceNumbers.length, 0);
 
   // Check that the receivedDatagrams is less than or equal to
   // incomingMaxBufferedDatagrams.
