@@ -89,7 +89,7 @@ void Http2WebTransportSessionImpl::GetMaxDatagramSize() {
 
 nsresult Http2WebTransportSessionImpl::ExportKeyingMaterial(
     const nsTArray<uint8_t>& aLabel, const nsTArray<uint8_t>& aContext,
-    nsTArray<uint8_t>& aKeyingMaterial) {
+    uint32_t aOutputLength, nsTArray<uint8_t>& aKeyingMaterial) {
   // TODO: Implement exportKeyingMaterial for HTTP/2 WebTransport
   // HTTP/2 WebTransport over TLS should support this via the underlying TLS
   // connection, but the implementation is not yet available.

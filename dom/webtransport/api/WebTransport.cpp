@@ -32,6 +32,7 @@
 #include "mozilla/ipc/Endpoint.h"
 #include "mozilla/ipc/PBackgroundChild.h"
 #include "nsIURL.h"
+#include "nsIWebTransport.h"
 #include "nsIWebTransportStream.h"
 #include "nsPIDOMWindowInlines.h"
 #include "nsTHashSet.h"
@@ -836,49 +837,52 @@ void WebTransport::SendGetStatsRequest(Promise* aPromise) {
 }
 
 already_AddRefed<Promise> WebTransport::ExportKeyingMaterial(
-    const BufferSource& aLabel, const Optional<BufferSource>& aContext,
-    ErrorResult& aError) {
+    const BufferSource& aLabel, const BufferSource& aContext,
+    uint32_t aOutputLength, ErrorResult& aError) {
   LOG(("ExportKeyingMaterial() called"));
 
   // https://w3c.github.io/webtransport/#dom-webtransport-exportkeyingmaterial
-  // Step 1-2: Extract label data
+  // Step 1: Let labelLength be label's byte length.
   nsTArray<uint8_t> labelData;
   ProcessTypedArraysFixed(aLabel, [&](const Span<const uint8_t>& aData) {
     labelData.AppendElements(aData.Elements(), aData.Length());
   });
 
-  // Step 3: If labelLength is more than 255, return a promise rejected with a
-  // RangeError
+  // Step 2: If labelLength is more than 255, return a promise rejected with a
+  // RangeError.
   if (labelData.Length() > 255) {
     aError.ThrowRangeError("label must not exceed 255 bytes");
     return nullptr;
   }
 
-  // Step 4: Let contextLength be 0.
-  // Step 5: If context is given, set contextLength to context.byte length.
-  Maybe<nsTArray<uint8_t>> contextData;
-  if (aContext.WasPassed()) {
-    nsTArray<uint8_t> context;
-    ProcessTypedArraysFixed(
-        aContext.Value(), [&](const Span<const uint8_t>& aData) {
-          context.AppendElements(aData.Elements(), aData.Length());
-        });
+  // Step 3-4: Let contextLength be context's byte length (context is a
+  // required argument).
+  nsTArray<uint8_t> contextData;
+  ProcessTypedArraysFixed(aContext, [&](const Span<const uint8_t>& aData) {
+    contextData.AppendElements(aData.Elements(), aData.Length());
+  });
 
-    // Step 6: If contextLength is more than 255, return a promise rejected with
-    // a RangeError
-    if (context.Length() > 255) {
-      aError.ThrowRangeError("context must not exceed 255 bytes");
-      return nullptr;
-    }
+  // Step 5: If contextLength is more than 255, return a promise rejected with a
+  // RangeError.
+  if (contextData.Length() > 255) {
+    aError.ThrowRangeError("context must not exceed 255 bytes");
+    return nullptr;
+  }
 
-    contextData = Some(std::move(context));
+  // Step 6: If outputLength is 0 or more than the implementation-defined
+  // maximum (which the spec requires to be at least 4096), return a promise
+  // rejected with a RangeError.
+  if (aOutputLength == 0 ||
+      aOutputLength > nsIWebTransport::MAX_KEYING_MATERIAL_LENGTH) {
+    aError.ThrowRangeError("outputLength must be between 1 and 4096 bytes");
+    return nullptr;
   }
 
   // Step 7: Let p be a new promise.
   RefPtr<Promise> promise = Promise::CreateInfallible(GetParentObject());
 
-  // Step 8: If transport.[[State]] is "closed" or "failed", return a new
-  // rejected promise with an InvalidStateError.
+  // The parallel steps abort with an InvalidStateError if the transport becomes
+  // "closed" or "failed"; reject synchronously here as well.
   if (mState == WebTransportState::CLOSED ||
       mState == WebTransportState::FAILED || !mChild) {
     promise->MaybeRejectWithInvalidStateError("Transport closed or failed");
@@ -886,7 +890,7 @@ already_AddRefed<Promise> WebTransport::ExportKeyingMaterial(
   }
 
   mChild->SendExportKeyingMaterial(
-      labelData, contextData,
+      labelData, contextData, aOutputLength,
       [self = RefPtr{this}, promise](
           nsTArray<uint8_t>&& aKeyingMaterial) MOZ_CAN_RUN_SCRIPT_BOUNDARY {
         // Step 8: If transport.[[State]] became "closed" or "failed", reject
