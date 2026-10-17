@@ -811,8 +811,9 @@ void WebTransport::SendGetStatsRequest(Promise* aPromise) {
         // (datagrams queue drops/expiry) rather than at the transport layer,
         // so snapshot them here.
         self->mCachedStats = Some(*aStats);
-        // The datagram queue doesn't count drops/expiry yet; see bug 2007757.
-        self->mCachedDroppedIncoming = 0;
+        self->mCachedDroppedIncoming =
+            self->mDatagrams ? self->mDatagrams->GetDroppedIncoming() : 0;
+        // The queue doesn't count expiry until bug 2023587 adds it.
         self->mCachedExpiredIncoming = 0;
 
         WebTransportConnectionStats stats;
@@ -975,7 +976,7 @@ void WebTransport::RemoteClosed(bool aCleanly, const uint32_t& aCode,
   if (!mCachedStats && aStats) {
     LOG(("Caching stats from RemoteClosed"));
     mCachedStats = Some(*aStats);
-    mCachedDroppedIncoming = 0;
+    mCachedDroppedIncoming = mDatagrams ? mDatagrams->GetDroppedIncoming() : 0;
   }
 
   // Step 2 of https://w3c.github.io/webtransport/#web-transport-termination
@@ -1134,7 +1135,8 @@ void WebTransport::Close(const WebTransportCloseInfo& aOptions,
           LOG(("Caching stats from close: bytesSent=%llu",
                (unsigned long long)aStats->bytesSent()));
           self->mCachedStats = Some(*aStats);
-          self->mCachedDroppedIncoming = 0;
+          self->mCachedDroppedIncoming =
+              self->mDatagrams ? self->mDatagrams->GetDroppedIncoming() : 0;
         } else {
           LOG(("No stats returned from close"));
           self->mCachedStats = Nothing();

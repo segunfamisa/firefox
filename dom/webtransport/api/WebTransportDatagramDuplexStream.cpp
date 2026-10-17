@@ -99,7 +99,7 @@ void WebTransportDatagramDuplexStream::SetIncomingHighWaterMark(
   // https://w3c.github.io/webtransport/#dom-webtransportdatagramduplexstream-incominghighwatermark
   // Step 1
   if (isnan(aWaterMark) || aWaterMark < 0.) {
-    aRv.ThrowRangeError("Invalid OutgoingMaxAge");
+    aRv.ThrowRangeError("Invalid IncomingHighWaterMark");
     return;
   }
   // Step 2
@@ -177,6 +177,19 @@ WebTransportDatagramDuplexStream::CreateWritable(
 void WebTransportDatagramDuplexStream::NewDatagramReceived(
     nsTArray<uint8_t>&& aData, const mozilla::TimeStamp& aTimeStamp) {
   LOG(("received Datagram, size = %zu", aData.Length()));
+
+  // Check if queue has reached high water mark and if so drop oldest
+  // datagram(s). We still drop if equal to the highwatermark since we'll add
+  // one
+  while (mIncomingDatagramsQueue.Count() >=
+         static_cast<uint32_t>(mIncomingHighWaterMark)) {
+    LOG(
+        ("Dropping oldest incoming datagram: queue size (%zu) >= high water "
+         "mark (%f)",
+         mIncomingDatagramsQueue.Count(), mIncomingHighWaterMark));
+    UniquePtr<DatagramEntry> entry = mIncomingDatagramsQueue.Pop();
+    mDroppedIncoming++;
+  }
   mIncomingDatagramsQueue.Push(
       std::make_unique<DatagramEntry>(std::move(aData), aTimeStamp));
   mIncomingAlgorithms->NotifyDatagramAvailable();
