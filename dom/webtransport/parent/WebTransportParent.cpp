@@ -768,11 +768,17 @@ WebTransportParent::OnSessionClosed(const bool aCleanly,
 }
 
 NS_IMETHODIMP WebTransportParent::OnDraining() {
-  MOZ_ASSERT(mSocketThread->IsOnCurrentThread());
-
   LOG(("WebTransportParent::OnDraining %p", this));
 
-  (void)SendDraining();
+  // A server that drains immediately upon connection can deliver this before
+  // WebTransportSessionProxy::RetargetTo(mSocketThread) (called from
+  // OnSessionReady) has taken effect, in which case we're still on the main
+  // thread here. SendDraining() requires the actor's worker thread
+  // (mSocketThread, the thread the parent endpoint was Bind()'d on), so hop
+  // there explicitly instead of assuming our caller already did.
+  mSocketThread->Dispatch(NS_NewRunnableFunction(
+      "WebTransportParent::OnDraining",
+      [self = RefPtr{this}] { (void)self->SendDraining(); }));
 
   return NS_OK;
 }

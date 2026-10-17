@@ -1318,6 +1318,16 @@ WebTransportSessionProxy::OnDraining() {
 
   {
     MutexAutoLock lock(mMutex);
+    // Since OnSessionReady on the listener is called on the main thread,
+    // OnDraining and OnSessionReady can be racy. If OnStopRequest is not
+    // called yet, mTarget may still be the pre-retargeting default and
+    // OnDraining needs to wait.
+    if (!mStopRequestCalled) {
+      mPendingEvents.AppendElement(
+          [self = RefPtr{this}]() { (void)self->OnDraining(); });
+      return NS_OK;
+    }
+
     if (!mTarget->IsOnCurrentThread()) {
       return mTarget->Dispatch(NS_NewRunnableFunction(
           "WebTransportSessionProxy::OnDraining",
