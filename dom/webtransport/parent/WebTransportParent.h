@@ -76,6 +76,10 @@ class WebTransportParent : public PWebTransportParent,
   ::mozilla::ipc::IPCResult RecvGetHttpChannelID(
       GetHttpChannelIDResolver&& aResolver);
 
+  // Drops the callback-map entries of a peer-opened stream whose pipes have
+  // all finished copying.
+  void RemoveFinishedIncomingStream(uint64_t aStreamId);
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   class OnResetOrStopSendingCallback final {
@@ -136,6 +140,13 @@ class WebTransportParent : public PWebTransportParent,
   nsTHashMap<NoMemMoveKey<nsUint64HashKey>,
              StreamHash<nsIWebTransportSendStream>>
       mUniStreamCallbackMap;
+  // Incoming (receive-only) unidirectional streams: tracked separately from
+  // mUniStreamCallbackMap (which holds outgoing send streams) so
+  // RecvStopSendingStream() can find the stream a cancel() on the DOM side
+  // targets and call its own sendStopSending().
+  nsTHashMap<NoMemMoveKey<nsUint64HashKey>,
+             StreamHash<nsIWebTransportReceiveStream>>
+      mIncomingUniStreamCallbackMap;
 };
 
 }  // namespace mozilla::dom

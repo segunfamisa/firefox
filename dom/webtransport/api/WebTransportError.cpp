@@ -13,23 +13,19 @@ JSObject* WebTransportError::WrapObject(JSContext* aCx,
 
 /* static */
 already_AddRefed<WebTransportError> WebTransportError::Constructor(
-    const GlobalObject& aGlobal, const WebTransportErrorInit& aInit) {
-  //  https://w3c.github.io/webtransport/#web-transport-error-constructor1
+    const GlobalObject& aGlobal, const nsAString& aMessage,
+    const WebTransportErrorOptions& aOptions) {
+  // https://w3c.github.io/webtransport/#dom-webtransporterror-webtransporterror
 
-  // Step 2: Let message be init.message if it exists, and "" otherwise.
-  nsCString message(""_ns);
-  if (aInit.mMessage.WasPassed()) {
-    CopyUTF16toUTF8(aInit.mMessage.Value(), message);
-  }
+  // Steps 1-2: set this's name to "WebTransportError" and message to
+  // message (both handled by the DOMException base constructor below).
+  nsCString message;
+  CopyUTF16toUTF8(aMessage, message);
 
-  // Step 1: Let error be this.
-  // Step 3: Set up error with message and "stream".
-  RefPtr<WebTransportError> error(new WebTransportError(message));
-
-  // Step 4: Set error.[[StreamErrorCode]] to init.streamErrorCode if it exists.
-  if (aInit.mStreamErrorCode.WasPassed()) {
-    error->mStreamErrorCode = Nullable(aInit.mStreamErrorCode.Value());
-  }
+  // Step 3: set [[Source]] to options.source and [[StreamErrorCode]] to
+  // options.streamErrorCode.
+  RefPtr<WebTransportError> error(new WebTransportError(
+      message, aOptions.mSource, aOptions.mStreamErrorCode));
   return error.forget();
 }
 

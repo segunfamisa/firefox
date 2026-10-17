@@ -1866,8 +1866,14 @@ void Http3Session::ResetOrStopSendingRecvd(uint64_t aStreamId, uint64_t aError,
 
   uint64_t sessionId = 0;
   if (mWebTransportStreamToSessionMap.Get(aStreamId, &sessionId)) {
-    uint8_t wtError = Http3ErrorToWebTransportError(aError);
-    nsresult rv = GetNSResultFromWebTransportError(wtError);
+    Maybe<uint32_t> appError = Http3ErrorToWebTransportError(aError);
+    // The nsresult carrier only holds 8 bits.
+    nsresult rv = GetNSResultFromWebTransportError(
+        appError && *appError <= UINT8_MAX ? static_cast<uint8_t>(*appError)
+                                           : 0);
+    // A code that is no application error code is reported as one above 32
+    // bits, which the listener turns into "no code".
+    uint64_t wtError = appError ? *appError : UINT64_MAX;
 
     RefPtr<Http3StreamBase> stream = mStreamIdHash.Get(aStreamId);
     if (stream) {
@@ -1888,9 +1894,9 @@ void Http3Session::ResetOrStopSendingRecvd(uint64_t aStreamId, uint64_t aError,
       MOZ_ASSERT(wtSession);
       if (wtSession) {
         if (aType == RESET) {
-          wtSession->OnStreamReset(aStreamId, rv);
+          wtSession->OnStreamReset(aStreamId, wtError);
         } else {
-          wtSession->OnStreamStopSending(aStreamId, rv);
+          wtSession->OnStreamStopSending(aStreamId, wtError);
         }
       }
     }
@@ -2447,10 +2453,10 @@ void Http3Session::ResetWebTransportStream(Http3WebTransportStream* aStream,
 }
 
 void Http3Session::StreamStopSending(Http3WebTransportStream* aStream,
-                                     uint8_t aErrorCode) {
+                                     uint64_t aErrorCode) {
   MOZ_ASSERT(OnSocketThread(), "not on socket thread");
-  LOG(("Http3Session::StreamStopSending %p %p 0x%" PRIx32, this, aStream,
-       static_cast<uint32_t>(aErrorCode)));
+  LOG(("Http3Session::StreamStopSending %p %p 0x%" PRIx64, this, aStream,
+       aErrorCode));
   mHttp3Connection->StreamStopSending(aStream->StreamId(), aErrorCode);
 }
 
@@ -2551,15 +2557,18 @@ nsresult Http3Session::ReadResponseData(uint64_t aStreamId, char* aBuf,
   nsresult rv = mHttp3Connection->ReadResponseData(aStreamId, (uint8_t*)aBuf,
                                                    aCount, aCountWritten, aFin);
 
-  // This should not happen, i.e. stream must be present in neqo and in necko at
-  // the same time.
-  MOZ_ASSERT(rv != NS_ERROR_INVALID_ARG);
+  // A stream must be present in neqo and in necko at the same time, except
+  // that a WebTransport stream is removed from neqo when it is reset (via
+  // RESET_STREAM or STOP_SENDING) while the necko stream may still read.
+  MOZ_ASSERT_IF(!mWebTransportStreamToSessionMap.Contains(aStreamId),
+                rv != NS_ERROR_INVALID_ARG);
   if (NS_FAILED(rv)) {
     LOG3(("Http3Session::ReadResponseData return an error %" PRIx32
           " [this=%p]",
           static_cast<uint32_t>(rv), this));
-    // This error will be handled by neqo and the whole connection will be
-    // closed. We will return NS_BASE_STREAM_WOULD_BLOCK here.
+    // For NS_ERROR_INVALID_ARG (stream not found in neqo), treat it as
+    // no data available. For other errors, neqo will handle the error
+    // and potentially close the connection.
     *aCountWritten = 0;
     *aFin = false;
     rv = NS_BASE_STREAM_WOULD_BLOCK;

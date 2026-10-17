@@ -70,7 +70,7 @@ class Http3WebTransportStream final : public WebTransportStreamBase,
 
   void SendFin() override;
   void Reset(uint64_t aErrorCode) override;
-  void SendStopSending(uint8_t aErrorCode) override;
+  void SendStopSending(uint64_t aErrorCode) override;
 
   already_AddRefed<nsIWebTransportSendStreamStats> GetSendStreamStats()
       override;
@@ -98,7 +98,7 @@ class Http3WebTransportStream final : public WebTransportStreamBase,
   // The error code used to reset the stream. Should be only set once.
   Maybe<uint64_t> mResetError;
   // The error code used for STOP_SENDING. Should be only set once.
-  Maybe<uint8_t> mStopSendingError;
+  Maybe<uint64_t> mStopSendingError;
 
   // This is used when SendFin or Reset is called when mSendState is SENDING.
   nsTArray<std::function<void()>> mPendingTasks;
