@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "gfxFontEntry.h"
 #include "harfbuzz/hb.h"
 #include "mozilla/HashFunctions.h"
 #include "mozilla/MruCache.h"
@@ -14,8 +15,6 @@
 #include "mozilla/gfx/Types.h"
 #include "nsAtom.h"
 #include "nsTArray.h"
-
-class gfxFontEntry;
 
 namespace mozilla::gfx {
 
@@ -40,37 +39,33 @@ class FontPalette {
 
 // MRU cache used for resolved color-font palettes, to avoid reconstructing
 // the palette for each glyph rendered with a given font.
-using CacheKey = RefPtr<nsAtom>;
+using CacheKey = std::pair<RefPtr<gfxFontEntry>, RefPtr<nsAtom>>;
 struct CacheData {
   CacheKey mKey;
   RefPtr<FontPalette> mPalette;
 };
 
-// PaletteCache is attached to a specific gfxFontEntry and holds palettes found
-// in that font, with lookup by palette name.
 class PaletteCache
-    : public mozilla::MruCache<CacheKey, CacheData, PaletteCache, 8> {
+    : public mozilla::MruCache<CacheKey, CacheData, PaletteCache> {
  public:
-  PaletteCache() = default;
+  explicit PaletteCache(const FontPaletteValueSet* aPaletteValueSet = nullptr)
+      : mPaletteValueSet(aPaletteValueSet) {}
 
-  // Get the palette named aPaletteName, if present.
-  already_AddRefed<FontPalette> GetCachedPalette(
-      mozilla::gfx::FontPaletteValueSet* aPaletteValueSet,
-      nsAtom* aPaletteName);
+  void SetPaletteValueSet(const FontPaletteValueSet* aSet);
 
-  // Store the given palette in the cache.
-  void AddPalette(mozilla::gfx::FontPaletteValueSet* aPaletteValueSet,
-                  nsAtom* aPaletteName, mozilla::gfx::FontPalette* aPalette);
+  already_AddRefed<FontPalette> GetPaletteFor(gfxFontEntry* aFontEntry,
+                                              nsAtom* aPaletteName);
 
-  static bool IsEmpty(const CacheData& aVal) { return !aVal.mKey; }
-  static mozilla::HashNumber Hash(const CacheKey& aKey) { return aKey->hash(); }
+  static bool IsEmpty(const CacheData& aVal) { return !aVal.mKey.first; }
+  static mozilla::HashNumber Hash(const CacheKey& aKey) {
+    return mozilla::HashGeneric(aKey.first.get(), aKey.second.get());
+  }
   static bool Match(const CacheKey& aKey, const CacheData& aVal) {
     return aVal.mKey == aKey;
   }
 
  protected:
-  // The palette value set for which cached entries were created.
-  RefPtr<FontPaletteValueSet> mPaletteValueSet;
+  const FontPaletteValueSet* mPaletteValueSet = nullptr;
 };
 
 }  // namespace mozilla::gfx
