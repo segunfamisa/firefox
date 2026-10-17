@@ -96,6 +96,8 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
                     const Maybe<WebTransportStatsData>& aStats);
 
   void SetNegotiatedProtocol(const nsACString& aProtocol);
+  void SetResponseHeaders(
+      nsTArray<mozilla::ipc::WebTransportHeader>&& aHeaders);
 
   void OnStreamResetOrStopSending(uint64_t aStreamId,
                                   const StreamResetOrStopSendingError& aError);
@@ -194,6 +196,7 @@ class WebTransport final : public nsISupports, public nsWrapperCache {
       mIncomingUnidirectionalAlgorithm;
   WebTransportReliabilityMode mReliability;
   nsString mProtocol;
+  nsTArray<mozilla::ipc::WebTransportHeader> mResponseHeaders;
   // Incoming streams get queued here.  Use a TArray though it's working as
   // a FIFO - rarely will there be more than one entry in these arrays, so
   // the overhead of mozilla::Queue is unneeded
