@@ -891,56 +891,69 @@ already_AddRefed<Promise> WebTransport::ExportKeyingMaterial(
 
   mChild->SendExportKeyingMaterial(
       labelData, contextData, aOutputLength,
-      [self = RefPtr{this}, promise](
-          nsTArray<uint8_t>&& aKeyingMaterial) MOZ_CAN_RUN_SCRIPT_BOUNDARY {
-        // Step 8: If transport.[[State]] became "closed" or "failed", reject
-        // with InvalidStateError
-        if (self->mState == WebTransportState::CLOSED ||
-            self->mState == WebTransportState::FAILED) {
-          promise->MaybeRejectWithInvalidStateError(
-              "Transport closed or failed during export");
-          return;
-        }
+      [self = RefPtr{this}, promise](Maybe<nsTArray<uint8_t>>&& aKeyingMaterial)
+          MOZ_CAN_RUN_SCRIPT_BOUNDARY {
+            // Step 8: If transport.[[State]] became "closed" or "failed",
+            // reject with InvalidStateError
+            if (self->mState == WebTransportState::CLOSED ||
+                self->mState == WebTransportState::FAILED) {
+              promise->MaybeRejectWithInvalidStateError(
+                  "Transport closed or failed during export");
+              return;
+            }
 
-        // Convert the byte array to ArrayBuffer
-        AutoJSAPI jsapi;
-        if (!jsapi.Init(promise->GetGlobalObject())) {
-          promise->MaybeRejectWithTypeError("Failed to initialize JS API");
-          return;
-        }
-        JSContext* cx = jsapi.cx();
+            // The parent rejects with Nothing() on any internal export failure
+            // (e.g. the TLS keying material exporter itself failed); there's no
+            // spec-defined error for this case, so use InvalidStateError to
+            // match the state-based rejection above.
+            if (!aKeyingMaterial) {
+              promise->MaybeRejectWithInvalidStateError(
+                  "Failed to export keying material");
+              return;
+            }
+            const nsTArray<uint8_t>& keyingMaterial = *aKeyingMaterial;
 
-        UniquePtr<uint8_t[], JS::FreePolicy> data(
-            static_cast<uint8_t*>(JS_malloc(cx, aKeyingMaterial.Length())));
-        if (!data) {
-          promise->MaybeRejectWithTypeError("Out of memory");
-          return;
-        }
-        memcpy(data.get(), aKeyingMaterial.Elements(),
-               aKeyingMaterial.Length());
+            // Convert the byte array to ArrayBuffer
+            AutoJSAPI jsapi;
+            if (!jsapi.Init(promise->GetGlobalObject())) {
+              promise->MaybeRejectWithTypeError("Failed to initialize JS API");
+              return;
+            }
+            JSContext* cx = jsapi.cx();
 
-        JS::Rooted<JSObject*> arrayBuffer(
-            cx, JS::NewArrayBufferWithContents(cx, aKeyingMaterial.Length(),
-                                               std::move(data)));
-        if (!arrayBuffer) {
-          promise->MaybeRejectWithTypeError("Failed to create ArrayBuffer");
-          return;
-        }
+            UniquePtr<uint8_t[], JS::FreePolicy> data(
+                static_cast<uint8_t*>(JS_malloc(cx, keyingMaterial.Length())));
+            if (!data) {
+              promise->MaybeRejectWithTypeError("Out of memory");
+              return;
+            }
+            memcpy(data.get(), keyingMaterial.Elements(),
+                   keyingMaterial.Length());
 
-        JSObject* uint8Array = JS_NewUint8ArrayWithBuffer(
-            cx, arrayBuffer, 0, static_cast<int64_t>(aKeyingMaterial.Length()));
-        if (!uint8Array) {
-          promise->MaybeRejectWithTypeError("Failed to create Uint8Array");
-          return;
-        }
+            JS::Rooted<JSObject*> arrayBuffer(
+                cx, JS::NewArrayBufferWithContents(cx, keyingMaterial.Length(),
+                                                   std::move(data)));
+            if (!arrayBuffer) {
+              promise->MaybeRejectWithTypeError("Failed to create ArrayBuffer");
+              return;
+            }
 
-        // Step 8.1/8.2: Let keyingMaterial be the result of exporting TLS
-        // keying material, as defined in [WEB-TRANSPORT-OVERVIEW] Section 4.1,
-        // with labelLength, label, contextLength, and if present, context.
-        // Queue a network task with transport to resolve p with keyingMaterial.
-        JS::Rooted<JS::Value> value(cx, JS::ObjectValue(*uint8Array));
-        promise->MaybeResolve(value);
-      },
+            JSObject* uint8Array = JS_NewUint8ArrayWithBuffer(
+                cx, arrayBuffer, 0,
+                static_cast<int64_t>(keyingMaterial.Length()));
+            if (!uint8Array) {
+              promise->MaybeRejectWithTypeError("Failed to create Uint8Array");
+              return;
+            }
+
+            // Step 8.1/8.2: Let keyingMaterial be the result of exporting TLS
+            // keying material, as defined in [WEB-TRANSPORT-OVERVIEW]
+            // Section 4.1, with labelLength, label, contextLength, and if
+            // present, context. Queue a network task with transport to resolve
+            // p with keyingMaterial.
+            JS::Rooted<JS::Value> value(cx, JS::ObjectValue(*uint8Array));
+            promise->MaybeResolve(value);
+          },
       [promise](mozilla::ipc::ResponseRejectReason) {
         promise->MaybeRejectWithInvalidStateError(
             "Failed to export keying material");
