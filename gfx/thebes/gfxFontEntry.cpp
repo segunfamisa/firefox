@@ -93,7 +93,11 @@ gfxFontEntry::~gfxFontEntry() {
     }
   }
 
-  delete mSVGGlyphs.exchange(nullptr);
+  // Only the main thread uses SVG glyphs, but the last reference to a font
+  // entry may be dropped on any thread. Nothing else can access the entry
+  // anymore at this point, so this read is safe.
+  MOZ_ASSERT(NS_IsMainThread() || !mSVGGlyphs);
+  mSVGGlyphs = nullptr;
   delete[] mUVSData.exchange(nullptr);
 
   gfxCharacterMap* cmap = mCharacterMap.exchange(nullptr);
@@ -369,6 +373,7 @@ bool gfxFontEntry::TryGetSVGData(const gfxFont* aFont) {
   if (!NS_IsMainThread()) {
     return false;
   }
+  AssertIsOnMainThread();
 
   if (!mSVGInitialized) {
     // If UnitsPerEm is not known/valid, we can't use SVG glyphs
@@ -387,10 +392,7 @@ bool gfxFontEntry::TryGetSVGData(const gfxFont* aFont) {
 
     // gfxSVGGlyphs will hb_blob_destroy() the table when it is finished
     // with it.
-    auto* svgGlyphs = new gfxSVGGlyphs(svgTable, this);
-    if (!mSVGGlyphs.compareExchange(nullptr, svgGlyphs)) {
-      delete svgGlyphs;
-    }
+    mSVGGlyphs = MakeUnique<gfxSVGGlyphs>(svgTable, this);
     mSVGInitialized = true;
   }
 
@@ -688,8 +690,9 @@ void gfxFontEntry::ReleaseGrFace(tainted_opaque_gr<gr_face*> aFace) {
 }
 
 void gfxFontEntry::DisconnectSVG() {
+  AssertIsOnMainThread();
   if (mSVGInitialized && mSVGGlyphs) {
-    delete mSVGGlyphs.exchange(nullptr);
+    mSVGGlyphs = nullptr;
     mSVGInitialized = false;
   }
 }
@@ -1409,9 +1412,9 @@ void gfxFontEntry::AddSizeOfExcludingThis(MallocSizeOf aMallocSizeOf,
     aSizes->mFontTableCacheSize +=
         mUserFontData->SizeOfIncludingThis(aMallocSizeOf);
   }
-  if (mSVGGlyphs) {
+  if (gfxSVGGlyphs* svgGlyphs = GetSVGGlyphs()) {
     aSizes->mFontTableCacheSize +=
-        GetSVGGlyphs()->SizeOfIncludingThis(aMallocSizeOf);
+        svgGlyphs->SizeOfIncludingThis(aMallocSizeOf);
   }
 
   {
