@@ -16,6 +16,7 @@
 #include "mozilla/dom/Promise-inl.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/ReadableStream.h"
+#include "mozilla/dom/ReadableStreamBinding.h"
 #include "mozilla/dom/ReadableStreamDefaultController.h"
 #include "mozilla/dom/RemoteWorkerChild.h"
 #include "mozilla/dom/WebTransportDatagramDuplexStream.h"
@@ -196,7 +197,7 @@ already_AddRefed<WebTransport> WebTransport::Constructor(
   // Don't let this document go into BFCache
   result->NotifyToWindow(true);
 
-  // Step 25 Return transport
+  // Step 35: Return transport.
   return result.forget();
 }
 
@@ -210,23 +211,21 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   using mozilla::ipc::PBackgroundChild;
 
   // https://w3c.github.io/webtransport/#webtransport-constructor
-  // Steps 1-4: Parse string for validity and Throw a SyntaxError if it isn't
-  // Let parsedURL be the URL record resulting from parsing url.
-  // If parsedURL is a failure, throw a SyntaxError exception.
-  // If parsedURL scheme is not https, throw a SyntaxError exception.
-  // If parsedURL fragment is not null, throw a SyntaxError exception.
+  // Steps 1-5: Let baseURL be this's relevant settings object's API base URL.
+  // Let url be the URL record resulting from parsing url with baseURL.
+  // If url is failure, throw a SyntaxError exception.
+  // If url's scheme is not https, throw a SyntaxError exception.
+  // If url's fragment is not null, throw a SyntaxError exception.
   if (!ParseURL(aURL)) {
     aError.ThrowSyntaxError("Invalid WebTransport URL");
     return;
   }
-  // Step 5: Let allowPooling be options's allowPooling if it exists, and false
-  // otherwise.
-  // Step 6: Let dedicated be the negation of allowPooling.
+  // Step 6: Let newConnection be "no" if options's allowPooling is true;
+  // otherwise "yes-and-dedicated". Represented here as a boolean.
   bool dedicated = !aOptions.mAllowPooling;
-  // Step 7: Let serverCertificateHashes be options's serverCertificateHashes if
-  // it exists, and null otherwise.
-  // Step 8: If dedicated is false and serverCertificateHashes is non-null,
-  // then throw a TypeError.
+  // Step 7: Let serverCertificateHashes be options's serverCertificateHashes.
+  // Step 8: If newConnection is "no" and serverCertificateHashes is not empty,
+  // then throw a NotSupportedError exception.
   nsTArray<mozilla::ipc::WebTransportHash> aServerCertHashes;
   if (aOptions.mServerCertificateHashes.WasPassed()) {
     if (!dedicated) {
@@ -262,8 +261,10 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
       WebTransportCongestionControl::Default;  // aOptions.mCongestionControl;
   // Set this to 'default' until we add congestion control setting
 
-  // Step 11.5: Let protocols be options's protocols if it exists, and null
-  // otherwise.
+  // Step 12: Let protocols be options's protocols.
+  // Step 13: If any of the values in protocols occur more than once, fail to
+  // match the requirements for the negotiated application protocol, or have an
+  // isomorphic encoded length of 0 or exceeding 512, throw a SyntaxError.
   nsTArray<nsString> protocols;
   if (aOptions.mProtocols.Length() != 0) {
     const auto& protocolSeq = aOptions.mProtocols;
@@ -356,14 +357,17 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
     }
   }
 
-  // Setup up WebTransportDatagramDuplexStream
-  // Step 12: Let incomingDatagrams be a new ReadableStream.
-  // Step 13: Let outgoingDatagrams be a new WritableStream.
-  // Step 14: Let datagrams be the result of creating a
-  // WebTransportDatagramDuplexStream, its readable set to
-  // incomingDatagrams and its writable set to outgoingDatagrams.
+  // Step 17: Let incomingDatagrams be a new ReadableStream.
+  // Steps 18-19: Let transport be a newly constructed WebTransport object and
+  // set transport.[[Datagrams]] to the result of creating a
+  // WebTransportDatagramDuplexStream with transport and incomingDatagrams.
+  // datagramsReadableType has no default, so a default (non-byte) readable
+  // stream is used unless the app opted into byte-stream semantics.
+  bool useByteStream =
+      aOptions.mDatagramsReadableType.WasPassed() &&
+      aOptions.mDatagramsReadableType.Value() == ReadableStreamType::Bytes;
   mDatagrams = new WebTransportDatagramDuplexStream(mGlobal, this);
-  mDatagrams->Init(aError);
+  mDatagrams->Init(useByteStream, aError);
   if (aError.Failed()) {
     return;
   }
@@ -374,16 +378,13 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
                                workerPrivate->IsServiceWorker())
                  ? nullptr
                  : net::WebTransportEventService::GetOrCreate();
-  // Step 15 Let transport be a newly constructed WebTransport object, with:
-  // SendStreams: empty ordered set
-  // ReceiveStreams: empty ordered set
-  // Ready: new promise
+  // Step 18 (continued): [[Ready]]: new promise
   mReady = Promise::CreateInfallible(mGlobal);
 
-  // Draining: new promise
+  // Step 18 (continued): [[Draining]]: new promise
   mDraining = Promise::CreateInfallible(mGlobal);
 
-  // Closed: new promise
+  // Step 18 (continued): [[Closed]]: new promise
   mClosed = Promise::CreateInfallible(mGlobal);
 
   PBackgroundChild* backgroundChild =
@@ -426,20 +427,16 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
 
   JSContext* cx = aGlobal.Context();
   // Set up Datagram streams
-  // Step 16: Let pullDatagramsAlgorithm be an action that runs pullDatagrams
+  // Step 20: Let pullDatagramsAlgorithm be an action that runs pullDatagrams
   // with transport.
-  // Step 17: Let writeDatagramsAlgorithm be an action that runs writeDatagrams
-  // with transport.
-  // Step 18: Set up incomingDatagrams with pullAlgorithm set to
+  // Step 21: Set up incomingDatagrams with pullAlgorithm set to
   // pullDatagramsAlgorithm, and highWaterMark set to 0.
-  // Step 19: Set up outgoingDatagrams with writeAlgorithm set to
-  // writeDatagramsAlgorithm.
 
   // XXX TODO
 
-  // Step 20: Let pullBidirectionalStreamAlgorithm be an action that runs
+  // Step 22: Let pullBidirectionalStreamAlgorithm be an action that runs
   // pullBidirectionalStream with transport.
-  // Step 21: Set up transport.[[IncomingBidirectionalStreams]] with
+  // Step 23: Set up transport.[[IncomingBidirectionalStreams]] with
   // pullAlgorithm set to pullBidirectionalStreamAlgorithm, and highWaterMark
   // set to 0.
   Optional<JS::Handle<JSObject*>> underlying;
@@ -458,9 +455,9 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
   if (aError.Failed()) {
     return;
   }
-  // Step 22: Let pullUnidirectionalStreamAlgorithm be an action that runs
+  // Step 24: Let pullUnidirectionalStreamAlgorithm be an action that runs
   // pullUnidirectionalStream with transport.
-  // Step 23: Set up transport.[[IncomingUnidirectionalStreams]] with
+  // Step 25: Set up transport.[[IncomingUnidirectionalStreams]] with
   // pullAlgorithm set to pullUnidirectionalStreamAlgorithm, and highWaterMark
   // set to 0.
 
@@ -474,13 +471,20 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
     return;
   }
 
-  // Step 24: Initialize WebTransport over HTTP with transport, parsedURL,
-  // dedicated, requireUnreliable, and congestionControl.
+  // Steps 26-34: Construct the HTTP CONNECT request with url,
+  // serverCertificateHashes, protocols, and headers, then fetch it with
+  // processResponse set to process a WebTransport fetch response.
   LOG(("Connecting WebTransport to parent for %s",
        NS_ConvertUTF16toUTF8(aURL).get()));
 
   // https://w3c.github.io/webtransport/#webtransport-constructor Spec 5.2
   mChild = child;
+
+  // Step 14: Let anticipatedConcurrentIncomingUnidirectionalStreams be
+  // options's anticipatedConcurrentIncomingUnidirectionalStreams.
+  // Step 15: Let anticipatedConcurrentIncomingBidirectionalStreams be
+  // options's anticipatedConcurrentIncomingBidirectionalStreams.
+
   backgroundChild
       ->SendCreateWebTransportParent(
           aURL, principal, mBrowsingContextID, ipcClientInfo, dedicated,
@@ -504,8 +508,7 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
                  self->RejectWaitingConnection(rv);
                } else {
                  // This will process anything waiting for the connection to
-                 // complete;
-
+                 // complete
                  self->ResolveWaitingConnection(
                      static_cast<WebTransportReliabilityMode>(
                          std::get<1>(aResult.ResolveValue())));
@@ -1137,6 +1140,8 @@ void WebTransport::Close(const WebTransportCloseInfo& aOptions,
           self->mCachedStats = Some(*aStats);
           self->mCachedDroppedIncoming =
               self->mDatagrams ? self->mDatagrams->GetDroppedIncoming() : 0;
+          // The queue doesn't count expiry until bug 2023587 adds it.
+          self->mCachedExpiredIncoming = 0;
         } else {
           LOG(("No stats returned from close"));
           self->mCachedStats = Nothing();
@@ -1206,7 +1211,7 @@ already_AddRefed<Promise> WebTransport::CreateBidirectionalStreamInternal(
   // https://w3c.github.io/webtransport/#dom-webtransport-createbidirectionalstream
   RefPtr<Promise> promise = Promise::CreateInfallible(GetParentObject());
 
-  // Step 2: If transport.[[State]] is "closed" or "failed", return a new
+  // Step 3: If transport.[[State]] is "closed" or "failed", return a new
   // rejected promise with an InvalidStateError.
   if (mState == WebTransportState::CLOSED ||
       mState == WebTransportState::FAILED || !mChild) {

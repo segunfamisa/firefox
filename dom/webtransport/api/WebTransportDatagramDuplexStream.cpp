@@ -6,9 +6,12 @@
 
 #include <memory>
 
+#include "js/experimental/TypedData.h"
+#include "mozilla/DebugOnly.h"
 #include "mozilla/dom/AutoEntryScript.h"
 #include "mozilla/dom/Promise-inl.h"
 #include "mozilla/dom/Promise.h"
+#include "mozilla/dom/TypedArray.h"
 #include "mozilla/dom/WebTransport.h"
 #include "mozilla/dom/WebTransportDatagramsWritable.h"
 #include "mozilla/dom/WebTransportLog.h"
@@ -31,7 +34,8 @@ WebTransportDatagramDuplexStream::WebTransportDatagramDuplexStream(
     nsIGlobalObject* aGlobal, WebTransport* aWebTransport)
     : mGlobal(aGlobal), mWebTransport(aWebTransport) {}
 
-void WebTransportDatagramDuplexStream::Init(ErrorResult& aError) {
+void WebTransportDatagramDuplexStream::Init(bool aUseByteStream,
+                                            ErrorResult& aError) {
   // https://w3c.github.io/webtransport/#webtransport-constructor
   // We are only called synchronously from JS creating a WebTransport object
   AutoEntryScript aes(mGlobal, "WebTransportDatagrams");
@@ -41,10 +45,15 @@ void WebTransportDatagramDuplexStream::Init(ErrorResult& aError) {
   nsCOMPtr<nsIGlobalObject> global(mGlobal);
   RefPtr<IncomingDatagramStreamAlgorithms> incomingAlgorithms =
       mIncomingAlgorithms;
-  // Step 18: Set up incomingDatagrams with pullAlgorithm set to
-  // pullDatagramsAlgorithm, and highWaterMark set to 0.
-  mReadable = ReadableStream::CreateNative(cx, global, *incomingAlgorithms,
-                                           Some(0.0), nullptr, aError);
+  // Step 20-21: If datagramsReadableType is "bytes", set up with byte reading
+  // support; otherwise set up normally.
+  if (aUseByteStream) {
+    mReadable = ReadableStream::CreateByteNative(
+        cx, global, *incomingAlgorithms, Some(0.0), aError);
+  } else {
+    mReadable = ReadableStream::CreateNative(cx, global, *incomingAlgorithms,
+                                             Some(0.0), nullptr, aError);
+  }
   if (aError.Failed()) {
     return;
   }
@@ -286,25 +295,69 @@ void IncomingDatagramStreamAlgorithms::ReturnDatagram(JSContext* aCx,
   LOG(("Returning a Datagram"));
 
   MOZ_ASSERT(!mDatagrams->mIncomingDatagramsQueue.IsEmpty());
-  // Pull Step 5: Let bytes and timestamp be the result of dequeuing queue.
+
+  // Step 5: Let incoming be the result of dequeuing queue.
   UniquePtr<DatagramEntry> entry = mDatagrams->mIncomingDatagramsQueue.Pop();
+  // Step 6: Let datagram be incoming[0].
+  size_t datagramSize = entry->mBuffer.Length();
 
-  // Pull Step 6: Let chunk be a new Uint8Array object representing bytes.
-  JSObject* outView = Uint8Array::Create(aCx, entry->mBuffer, aRv);
-  if (aRv.Failed()) {
-    return;
-  }
-  JS::Rooted<JSObject*> chunk(aCx, outView);
-
-  // Pull Step 7: Enqueue chunk to transport.[[Datagrams]].[[Readable]]
-  JS::Rooted<JS::Value> jsDatagram(aCx, JS::ObjectValue(*chunk));
-  // EnqueueNative is CAN_RUN_SCRIPT
   RefPtr<ReadableStream> stream = mDatagrams->mReadable;
-  stream->EnqueueNative(aCx, jsDatagram, aRv);
-  if (MOZ_UNLIKELY(aRv.Failed())) {
-    return;
+  // Step 7: If datagrams.[[ReadableType]] is "bytes", then:
+  if (stream->Controller()->IsByte()) {
+    // Step 7.1: If datagrams.[[Readable]]'s current BYOB request view is not
+    // null, then:
+    JS::Rooted<JSObject*> byobView(aCx);
+    stream->GetCurrentBYOBRequestView(aCx, &byobView, aRv);
+    if (aRv.Failed()) {
+      return;
+    }
+
+    if (byobView) {
+      // Step 7.1.1: Let view be datagrams.[[Readable]]'s current BYOB request
+      // view.
+      // Step 7.1.2: If view's byte length is less than the size of datagram,
+      // return a promise rejected with a RangeError.
+      if (datagramSize > JS_GetArrayBufferViewByteLength(byobView)) {
+        LOG(("BYOB buffer too small: datagram=%zu", datagramSize));
+        aRv.ThrowRangeError("Buffer too small for datagram");
+        return;
+      }
+
+      // Step 7.1.3: Let elementSize be the element size specified in the typed
+      // array constructors table for view.[[TypedArrayName]]. If view does not
+      // have a [[TypedArrayName]] internal slot (i.e. it is a DataView), let
+      // elementSize be 0.
+      // Step 7.1.4: If elementSize is not 1, return a promise rejected with a
+      // TypeError.
+      //
+      // The current BYOB request view is always a Uint8Array, so elementSize
+      // is always 1.
+      MOZ_ASSERT(JS_IsTypedArrayObject(byobView) &&
+                 JS_GetArrayBufferViewType(byobView) == JS::Scalar::Uint8);
+    }
+
+    // Step 7.2: Pull from bytes datagram into datagrams.[[Readable]].
+    //
+    // With a BYOB view we already rejected above if it is smaller than the
+    // datagram; without one the whole datagram is pulled by construction.
+    // Either way this consumes all of it.
+    DebugOnly<uint64_t> pulled =
+        stream->PullFromBytes(aCx, entry->mBuffer, aRv);
+    MOZ_ASSERT(aRv.Failed() || pulled == datagramSize);
+  } else {
+    // Step 8: Otherwise:
+    // Step 8.1: Let chunk be a new Uint8Array object representing datagram.
+    JSObject* outView = Uint8Array::Create(aCx, entry->mBuffer, aRv);
+    if (aRv.Failed()) {
+      return;
+    }
+    JS::Rooted<JSObject*> chunk(aCx, outView);
+
+    // Step 8.2: Enqueue chunk to transport.[[Datagrams]].[[Readable]].
+    JS::Rooted<JS::Value> jsDatagram(aCx, JS::ObjectValue(*chunk));
+    stream->EnqueueNative(aCx, jsDatagram, aRv);
   }
-  // (caller) Step 8: return a promise resolved with Undefined
+  // (caller) Step 9: Return a promise resolved with undefined.
 }
 
 void IncomingDatagramStreamAlgorithms::NotifyDatagramAvailable() {
