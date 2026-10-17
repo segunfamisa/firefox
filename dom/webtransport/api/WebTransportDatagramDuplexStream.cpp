@@ -4,6 +4,7 @@
 
 #include "WebTransportDatagramDuplexStream.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "js/experimental/TypedData.h"
@@ -103,36 +104,16 @@ void WebTransportDatagramDuplexStream::SetOutgoingMaxAge(double aMaxAge,
   mOutgoingMaxAge = aMaxAge;
 }
 
-void WebTransportDatagramDuplexStream::SetIncomingHighWaterMark(
-    double aWaterMark, ErrorResult& aRv) {
-  // https://w3c.github.io/webtransport/#dom-webtransportdatagramduplexstream-incominghighwatermark
-  // Step 1
-  if (isnan(aWaterMark) || aWaterMark < 0.) {
-    aRv.ThrowRangeError("Invalid IncomingHighWaterMark");
-    return;
-  }
-  // Step 2
-  if (aWaterMark < 1.0) {
-    aWaterMark = 1.0;
-  }
-  // Step 3
-  mIncomingHighWaterMark = aWaterMark;
+void WebTransportDatagramDuplexStream::SetIncomingMaxBufferedDatagrams(
+    uint32_t aValue) {
+  // https://w3c.github.io/webtransport/#dom-webtransportdatagramduplexstream-incomingmaxbuffereddatagrams
+  mIncomingMaxBufferedDatagrams = std::max(aValue, 1u);
 }
 
-void WebTransportDatagramDuplexStream::SetOutgoingHighWaterMark(
-    double aWaterMark, ErrorResult& aRv) {
-  // https://w3c.github.io/webtransport/#dom-webtransportdatagramduplexstream-outgoinghighwatermark
-  // Step 1
-  if (isnan(aWaterMark) || aWaterMark < 0.) {
-    aRv.ThrowRangeError("Invalid OutgoingHighWaterMark");
-    return;
-  }
-  // Step 2 of setter: If value is < 1, set value to 1.
-  if (aWaterMark < 1.0) {
-    aWaterMark = 1.0;
-  }
-  // Step 3
-  mOutgoingHighWaterMark = aWaterMark;
+void WebTransportDatagramDuplexStream::SetOutgoingMaxBufferedDatagrams(
+    uint32_t aValue) {
+  // https://w3c.github.io/webtransport/#dom-webtransportdatagramduplexstream-outgoingmaxbuffereddatagrams
+  mOutgoingMaxBufferedDatagrams = std::max(aValue, 1u);
 }
 
 already_AddRefed<WebTransportDatagramsWritable>
@@ -187,15 +168,14 @@ void WebTransportDatagramDuplexStream::NewDatagramReceived(
     nsTArray<uint8_t>&& aData, const mozilla::TimeStamp& aTimeStamp) {
   LOG(("received Datagram, size = %zu", aData.Length()));
 
-  // Check if queue has reached high water mark and if so drop oldest
-  // datagram(s). We still drop if equal to the highwatermark since we'll add
-  // one
-  while (mIncomingDatagramsQueue.Count() >=
-         static_cast<uint32_t>(mIncomingHighWaterMark)) {
+  // Drop oldest datagrams if the queue has reached the buffer limit. We still
+  // drop if equal since we're about to add one.
+  // TODO(Bug 2083166): apply backpressure instead of dropping.
+  while (mIncomingDatagramsQueue.Count() >= mIncomingMaxBufferedDatagrams) {
     LOG(
-        ("Dropping oldest incoming datagram: queue size (%zu) >= high water "
-         "mark (%f)",
-         mIncomingDatagramsQueue.Count(), mIncomingHighWaterMark));
+        ("Dropping oldest incoming datagram: queue size (%zu) >= "
+         "incomingMaxBufferedDatagrams (%u)",
+         mIncomingDatagramsQueue.Count(), mIncomingMaxBufferedDatagrams));
     UniquePtr<DatagramEntry> entry = mIncomingDatagramsQueue.Pop();
     mDroppedIncoming++;
   }
