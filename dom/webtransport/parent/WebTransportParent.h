@@ -107,9 +107,16 @@ class WebTransportParent : public PWebTransportParent,
   // called on the socket thread.
   void ResolvePendingGetStats(const Maybe<WebTransportStatsData>& aStats);
 
+  // Closes the session for a child that went away without Close().  Must be
+  // called on the socket thread after mWebTransport has been retargeted there.
+  void CloseSessionForDestroyedActor();
+
   using ResolveType = std::tuple<const nsresult&, const uint8_t&>;
   nsCOMPtr<nsISerialEventTarget> mSocketThread;
   Atomic<bool> mSessionReady{false};
+  // Set once mWebTransport has been retargeted to the socket thread.  Socket
+  // thread only.
+  bool mRetargeted = false;
   uint64_t mSessionId{0};
 
   mozilla::Mutex mMutex{"WebTransportParent::mMutex"};
