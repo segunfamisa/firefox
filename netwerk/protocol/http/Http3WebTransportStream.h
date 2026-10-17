@@ -82,6 +82,12 @@ class Http3WebTransportStream final : public WebTransportStreamBase,
 
   bool SentReset() const { return mResetError.isSome(); }
 
+  // RESET_STREAM or STOP_SENDING from the peer on a bidirectional stream ends
+  // only the receive or the send half, respectively; the other half stays
+  // usable until it finishes on its own.
+  void CloseReceiveSide(nsresult aResult);
+  void CloseSendSide(nsresult aResult);
+
  private:
   friend class Http3WebTransportSession;
   virtual ~Http3WebTransportStream();

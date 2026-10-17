@@ -1883,7 +1883,19 @@ void Http3Session::ResetOrStopSendingRecvd(uint64_t aStreamId, uint64_t aError,
       RefPtr<Http3WebTransportStream> wtStream =
           stream->GetHttp3WebTransportStream();
       if (wtStream) {
-        CloseWebTransportStream(wtStream, rv);
+        if (wtStream->StreamType() == WebTransportStreamType::BiDi) {
+          if (aType == RESET) {
+            wtStream->CloseReceiveSide(rv);
+          } else {
+            wtStream->CloseSendSide(rv);
+          }
+          // The stream goes away once both halves are done.
+          if (wtStream->Done()) {
+            CloseWebTransportStream(wtStream, rv);
+          }
+        } else {
+          CloseWebTransportStream(wtStream, rv);
+        }
       }
     }
 
