@@ -495,7 +495,7 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
              [self = RefPtr{this}](
                  PBackgroundChild::CreateWebTransportParentPromise::
                      ResolveOrRejectValue&& aResult) {
-               // aResult is a std::tuple<nsresult, uint8_t>
+               // aResult is a std::tuple<nsresult, uint8_t, uint64_t>
                // TODO: is there a better/more-spec-compliant error in the
                // reject case? Which begs the question, why would we get a
                // reject?
@@ -507,6 +507,14 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
                if (NS_FAILED(rv)) {
                  self->RejectWaitingConnection(rv);
                } else {
+                 // Set max datagram size from the CreateWebTransportParent
+                 // response
+                 uint64_t maxDatagramSize = std::get<2>(aResult.ResolveValue());
+                 MOZ_ASSERT(self->mDatagrams);
+                 self->mDatagrams->SetMaxDatagramSize(maxDatagramSize);
+                 LOG(("max datagram size for the session is %" PRIu64,
+                      maxDatagramSize));
+
                  // This will process anything waiting for the connection to
                  // complete
                  self->ResolveWaitingConnection(
@@ -547,22 +555,13 @@ void WebTransport::ResolveWaitingConnection(
     }
   }
 
-  mChild->SendGetMaxDatagramSize()->Then(
-      GetCurrentSerialEventTarget(), __func__,
-      [self = RefPtr{this}](uint64_t&& aMaxDatagramSize) {
-        MOZ_ASSERT(self->mDatagrams);
-        self->mDatagrams->SetMaxDatagramSize(aMaxDatagramSize);
-        LOG(("max datagram size for the session is %" PRIu64,
-             aMaxDatagramSize));
-      },
-      [](const mozilla::ipc::ResponseRejectReason& aReason) {
-        LOG(("WebTransport fetching maxDatagramSize failed"));
-      });
-
   // Step 17.5: Resolve transport.[[Ready]] with undefined.
+  // The max datagram size has already been set from the
+  // CreateWebTransportParent response, so datagrams are ready to be sent with
+  // the correct size limit.
   mReady->MaybeResolveWithUndefined();
 
-  // We can now release any queued datagrams
+  // Release queued datagrams with the correct max datagram size.
   mDatagrams->SetChild(mChild);
 
   if (mInnerWindowID != 0) {
@@ -1479,7 +1478,11 @@ void WebTransport::Cleanup(WebTransportError* aError,
     LOG(("Resolving mClosed with closeinfo"));
     mClosed->MaybeResolve(*aCloseInfo);
     // 12.2: Assert: ready is settled.
-    MOZ_ASSERT(mReady->State() != Promise::PromiseState::Pending);
+    // However, if the connection closes before maxDatagramSize is received,
+    // ready may still be pending. Resolve it in that case.
+    if (mReady->State() == Promise::PromiseState::Pending) {
+      mReady->MaybeResolveWithUndefined();
+    }
     // 12.3: Close incomingBidirectionalStreams
     // This keeps the clang-plugin happy
     RefPtr<ReadableStream> stream = mIncomingBidirectionalStreams;
