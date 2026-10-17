@@ -11,6 +11,7 @@
 #include "mozilla/RefPtr.h"
 #include "mozilla/dom/DOMExceptionBinding.h"
 #include "mozilla/dom/Document.h"
+#include "mozilla/dom/InternalHeaders.h"
 #include "mozilla/dom/PWebTransport.h"
 #include "mozilla/dom/Promise-inl.h"
 #include "mozilla/dom/Promise.h"
@@ -305,6 +306,56 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
     }
   }
 
+  // Step 30: Let headers be a new Headers object filled with
+  // options["headers"].
+  //
+  // Step 31: Let requestHeaders be a new Headers object whose header list is
+  // request's header list and guard is "request".
+  //
+  // Step 32: For each header of headers's header list:
+  //   1. If ascii lowercase header's name is "wt-available-protocols", then
+  //      throw a TypeError.
+  //   2. append header to requestHeaders.
+  // NOTE: Headers are subject to Fetch's forbidden request-header
+  // restrictions.
+  // NOTE: This runs right after the protocols checks (Step 13) rather than at
+  // Step 30, so the throws happen before any IPC state is set up.  See
+  // https://github.com/w3c/webtransport/issues/805
+  nsTArray<mozilla::ipc::WebTransportHeader> requestHeaderList;
+  if (aOptions.mHeaders.WasPassed()) {
+    const auto& init = aOptions.mHeaders.Value();
+    RefPtr<InternalHeaders> headers = new InternalHeaders();
+    if (init.IsByteStringSequenceSequence()) {
+      headers->Fill(init.GetAsByteStringSequenceSequence(), aError);
+    } else if (init.IsByteStringByteStringRecord()) {
+      headers->Fill(init.GetAsByteStringByteStringRecord(), aError);
+    }
+    if (aError.Failed()) {
+      return;
+    }
+    nsTArray<InternalHeaders::Entry> entries;
+    headers->GetEntries(entries);
+    RefPtr<InternalHeaders> requestHeaders =
+        new InternalHeaders(HeadersGuardEnum::Request);
+    for (const auto& entry : entries) {
+      if (entry.mName.LowerCaseEqualsLiteral("wt-available-protocols")) {
+        aError.ThrowTypeError(
+            "wt-available-protocols is not allowed in headers");
+        return;
+      }
+      requestHeaders->Append(entry.mName, entry.mValue, aError);
+      if (aError.Failed()) {
+        return;
+      }
+    }
+    nsTArray<InternalHeaders::Entry> requestEntries;
+    requestHeaders->GetEntries(requestEntries);
+    for (const auto& entry : requestEntries) {
+      requestHeaderList.AppendElement(
+          mozilla::ipc::WebTransportHeader(entry.mName, entry.mValue));
+    }
+  }
+
   // Setup up WebTransportDatagramDuplexStream
   // Step 12: Let incomingDatagrams be a new ReadableStream.
   // Step 13: Let outgoingDatagrams be a new WritableStream.
@@ -434,7 +485,8 @@ void WebTransport::Init(const GlobalObject& aGlobal, const nsAString& aURL,
       ->SendCreateWebTransportParent(
           aURL, principal, mBrowsingContextID, ipcClientInfo, dedicated,
           requireUnreliable, (uint32_t)congestionControl, protocols,
-          std::move(aServerCertHashes), std::move(parentEndpoint))
+          requestHeaderList, std::move(aServerCertHashes),
+          std::move(parentEndpoint))
       ->Then(GetCurrentSerialEventTarget(), __func__,
              [self = RefPtr{this}](
                  PBackgroundChild::CreateWebTransportParentPromise::
