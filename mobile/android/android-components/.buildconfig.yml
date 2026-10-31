@@ -2858,6 +2858,12 @@ projects:
     - components:support-base
     - components:support-test
     - components:tooling-lint
+  components:support-keyboard:
+    description: Support module for hardware keyboard input and contextual keyboard shortcuts.
+    path: components/support/keyboard
+    publish: true
+    upstream_dependencies:
+    - components:tooling-lint
   components:support-ktx:
     description: A set of Kotlin extensions.
     path: components/support/ktx

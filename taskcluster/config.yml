@@ -397,6 +397,7 @@ treeherder:
         'support-appservices': 'support-appservices'
         'support-base': 'support-base'
         'support-images': 'support-images'
+        'support-keyboard': 'support-keyboard'
         'support-ktx': 'support-ktx'
         'support-license': 'support-license'
         'support-locale': 'support-locale'
