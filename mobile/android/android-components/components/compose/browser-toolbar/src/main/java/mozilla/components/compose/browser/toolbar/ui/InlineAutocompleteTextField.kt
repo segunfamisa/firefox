@@ -112,6 +112,7 @@ private const val MIN_CHAR_COUNT_FOR_MULTILINE = 10_000
  * @param usePrivateModeQueries If `true`, instructs the keyboard to disable personalized learning, suitable for
  *   private/incognito modes.
  * @param modifier The [Modifier] to be applied to this text field.
+ * @param focusRequest Change this value to focus the editor and select its text.
  * @param onUrlEdit Callback invoked when the user types or deletes text, providing [BrowserToolbarQuery] with
  *   information about the previous and the new query.
  * @param onUrlCommitted A callback for when the user commits the text via an IME action like "Go".
@@ -125,6 +126,7 @@ internal fun InlineAutocompleteTextField(
     suggestion: AutocompleteResult?,
     showQueryAsPreselected: Boolean,
     usePrivateModeQueries: Boolean,
+    focusRequest: Int = 0,
     modifier: Modifier = Modifier,
     onUrlEdit: (BrowserToolbarQuery) -> Unit = {},
     onUrlCommitted: (String) -> Unit = {},
@@ -214,8 +216,11 @@ internal fun InlineAutocompleteTextField(
         snapshotFlow { textFieldState.text.toString() }.collect { pasteInterceptorToolbar.hide() }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(focusRequest) {
         focusRequester.requestFocus()
+        if (focusRequest != 0) {
+            textFieldState.edit { selection = TextRange(0, length) }
+        }
     }
 
     LaunchedEffect(query) {

@@ -2859,7 +2859,8 @@ projects:
     - components:support-test
     - components:tooling-lint
   components:support-keyboard:
-    description: Support module for hardware keyboard input and contextual keyboard shortcuts.
+    description: Support module for hardware keyboard input and contextual keyboard
+      shortcuts.
     path: components/support/keyboard
     publish: true
     upstream_dependencies:

@@ -66,6 +66,7 @@ import mozilla.components.ui.icons.R as iconsR
  * @param onUrlCommitted Will be called when the user has finished editing and wants to initiate loading the entered
  *   URL. The committed text value comes as a parameter of the callback.
  * @param onInteraction Callback for handling [BrowserToolbarEvent]s on user interactions.
+ * @param focusRequest Change this value to focus the editor and select its text.
  */
 @Composable
 fun BrowserEditToolbar(
@@ -82,6 +83,7 @@ fun BrowserEditToolbar(
     editActionsEnd: List<Action> = emptyList(),
     onUrlEdit: (BrowserToolbarQuery) -> Unit = {},
     onUrlCommitted: (String) -> Unit = {},
+    focusRequest: Int = 0,
     onInteraction: (BrowserToolbarEvent) -> Unit,
 ) {
     Surface(color = backgroundColor) {
@@ -107,6 +109,7 @@ fun BrowserEditToolbar(
                 )
 
                 InlineAutocompleteTextField(
+                    focusRequest = focusRequest,
                     query = query,
                     hint = hint,
                     suggestion = suggestion,

@@ -38,6 +38,9 @@ import androidx.core.text.HtmlCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
@@ -144,6 +147,8 @@ import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.keyboard.KeyboardShortcutDispatcherOwner
+import mozilla.components.support.keyboard.findViewTreeKeyboardShortcutDispatcherOwner
 import mozilla.components.support.ktx.android.content.appName
 import mozilla.components.support.ktx.android.content.isEdgeToEdgeDisabled
 import mozilla.components.support.ktx.android.view.ImeInsetsSynchronizer
@@ -196,6 +201,7 @@ import org.mozilla.fenix.components.FindInPageIntegration
 import org.mozilla.fenix.components.accounts.FxaWebChannelIntegration
 import org.mozilla.fenix.components.appstate.AppAction
 import org.mozilla.fenix.components.appstate.AppAction.MessagingAction.MicrosurveyAction
+import org.mozilla.fenix.components.keyboard.BrowserKeyboardShortcuts
 import org.mozilla.fenix.components.share.ShareSource
 import org.mozilla.fenix.components.toolbar.BottomToolbarContainerIntegration
 import org.mozilla.fenix.components.toolbar.BottomToolbarContainerView
@@ -441,6 +447,7 @@ abstract class BaseBrowserFragment :
         val profilerStartTime = requireComponents.core.engine.profiler?.getProfilerTime()
 
         initializeUI(view)
+        registerFindInPageShortcut(view)
 
         appLinksFeature.set(
             feature =
@@ -2596,6 +2603,47 @@ abstract class BaseBrowserFragment :
 
     private fun removeLastSavedGeneratedPassword() {
         lastSavedGeneratedPassword = null
+    }
+
+    private fun registerFindInPageShortcut(view: View) {
+        val dispatcherOwner =
+            view.findViewTreeKeyboardShortcutDispatcherOwner() ?: requireActivity() as KeyboardShortcutDispatcherOwner
+        val dispatcher = dispatcherOwner.keyboardShortcutDispatcher
+        val owner = viewLifecycleOwner
+        val navController = findNavController()
+        val store = requireComponents.core.store
+        val appStore = requireComponents.appStore
+        val callback =
+            dispatcher.addCallback(owner, BrowserKeyboardShortcuts.FindInPage, enabled = false) {
+                appStore.dispatch(AppAction.FindInPageAction.FindInPageStarted)
+            }
+
+        fun updateEnabled() {
+            callback.isEnabled =
+                owner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+                    navController.currentDestination?.id == R.id.browserFragment &&
+                    store.state.findCustomTabOrSelectedTab(customTabSessionId) != null
+        }
+
+        val listener = NavController.OnDestinationChangedListener { _, _, _ -> updateEnabled() }
+        navController.addOnDestinationChangedListener(listener)
+        owner.lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onResume(owner: LifecycleOwner) = updateEnabled()
+
+                override fun onPause(owner: LifecycleOwner) {
+                    callback.isEnabled = false
+                }
+
+                override fun onDestroy(owner: LifecycleOwner) {
+                    navController.removeOnDestinationChangedListener(listener)
+                    owner.lifecycle.removeObserver(this)
+                }
+            }
+        )
+        store.flowScoped(owner, Dispatchers.Main) { flow ->
+            flow.collect { updateEnabled() }
+        }
     }
 
     private fun launchFindInPageFeature(view: View, store: BrowserStore) {

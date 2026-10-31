@@ -113,6 +113,7 @@ projects:
     - components:support-appservices
     - components:support-base
     - components:support-images
+    - components:support-keyboard
     - components:support-ktx
     - components:support-license
     - components:support-locale

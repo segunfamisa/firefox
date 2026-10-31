@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
 import androidx.core.view.isVisible
+import androidx.navigation.findNavController
 import mozilla.components.browser.state.action.AwesomeBarAction
 import mozilla.components.browser.state.state.CustomTabSessionState
 import mozilla.components.browser.state.state.ExternalAppType
@@ -49,9 +50,11 @@ import mozilla.components.support.utils.keyboardAsState
 import mozilla.components.ui.widgets.behavior.DependencyGravity
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehaviorFactory
+import org.mozilla.fenix.R
 import org.mozilla.fenix.browser.store.BrowserScreenStore
 import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEnded
+import org.mozilla.fenix.components.keyboard.rememberAddressBarShortcutFocusRequest
 import org.mozilla.fenix.components.toolbar.ToolbarPosition.BOTTOM
 import org.mozilla.fenix.components.toolbar.ToolbarPosition.TOP
 import org.mozilla.fenix.theme.FirefoxTheme
@@ -101,6 +104,13 @@ class BrowserToolbarComposable(
 
     val layout: View =
         ScrollableToolbarComposeView(activity, this) {
+                val focusRequest =
+                    rememberAddressBarShortcutFocusRequest(
+                        toolbarStore = toolbarStore,
+                        navController = container.findNavController(),
+                        destinationId = R.id.browserFragment,
+                        enabled = customTabSession == null,
+                    )
                 val isSearching = toolbarStore.observeAsComposableState { it.isEditMode() }.value
                 val shouldShowTabStripAtTop = remember {
                     customTabSession == null && settings.shouldShowTabStripAtTop
@@ -169,6 +179,7 @@ class BrowserToolbarComposable(
                                         tabStripContent()
                                     }
                                     BrowserToolbar(
+                                        focusRequest = focusRequest,
                                         store = toolbarStore,
                                         cfr = toolbarCFR,
                                         useMinimalBottomToolbarWhenEnteringText =
@@ -194,6 +205,7 @@ class BrowserToolbarComposable(
                                             tabGroupsStripContent()
                                         }
                                         BrowserToolbar(
+                                            focusRequest = focusRequest,
                                             store = toolbarStore,
                                             cfr = toolbarCFR,
                                             useMinimalBottomToolbarWhenEnteringText =

@@ -51,6 +51,7 @@ import org.mozilla.fenix.components.AppStore
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchEnded
 import org.mozilla.fenix.components.appstate.AppAction.SearchAction.SearchStarted
 import org.mozilla.fenix.components.appstate.VoiceSearchAction.VoiceInputRequested
+import org.mozilla.fenix.components.keyboard.rememberAddressBarShortcutFocusRequest
 import org.mozilla.fenix.components.metrics.MetricsUtils
 import org.mozilla.fenix.components.toolbar.TopDividerColumn
 import org.mozilla.fenix.theme.FirefoxTheme
@@ -103,6 +104,7 @@ internal class HomeToolbarComposable(
 
     @Composable
     private fun DefaultToolbar() {
+        val focusRequest = rememberAddressBarShortcutFocusRequest(toolbarStore, navController, R.id.homeFragment)
         val isSearching = toolbarStore.observeAsComposableState { it.isEditMode() }.value
         val queryWasPrefilled =
             toolbarStore
@@ -143,13 +145,13 @@ internal class HomeToolbarComposable(
                                 },
                     )
             ) {
-                ToolbarContent(wallpaperTextColor = wallpaperTextColor)
+                ToolbarContent(wallpaperTextColor = wallpaperTextColor, focusRequest = focusRequest)
             }
         }
     }
 
     @Composable
-    private fun ToolbarContent(wallpaperTextColor: Color?) {
+    private fun ToolbarContent(wallpaperTextColor: Color?, focusRequest: Int) {
         val shouldUseBottomToolbar = remember { settings.shouldUseBottomToolbar }
         val shouldShowTabStrip = remember {
             if (shouldUseBottomToolbar) {
@@ -176,7 +178,7 @@ internal class HomeToolbarComposable(
                     tabStripContent()
                 }
 
-                AddressBar(wallpaperTextColor = wallpaperTextColor)
+                AddressBar(wallpaperTextColor = wallpaperTextColor, focusRequest = focusRequest)
 
                 if (shouldUseBottomToolbar) {
                     navigationBarContent?.invoke()
@@ -190,7 +192,7 @@ internal class HomeToolbarComposable(
     }
 
     @Composable
-    private fun ColumnScope.AddressBar(wallpaperTextColor: Color?) {
+    private fun ColumnScope.AddressBar(wallpaperTextColor: Color?, focusRequest: Int) {
         val isAddressBarVisible = remember { addressBarVisibility }
         val hasBottomStrip = remember {
             settings.shouldUseBottomToolbar &&
@@ -222,6 +224,7 @@ internal class HomeToolbarComposable(
                     ),
             ) {
                 BrowserToolbar(
+                    focusRequest = focusRequest,
                     store = toolbarStore,
                     browserActionsColor = wallpaperTextColor,
                     showDivider = !hasBottomStrip,

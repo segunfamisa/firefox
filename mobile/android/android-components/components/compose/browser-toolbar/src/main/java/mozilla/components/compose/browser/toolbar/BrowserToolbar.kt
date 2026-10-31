@@ -73,6 +73,7 @@ data class BrowserToolbarCFR(
  * @param browserActionsColor Optional `onSurface` color override applied only to the display toolbar's browser actions
  *   (outside the URL bounding box), leaving page actions unchanged.
  * @param showDivider Whether to show the divider on the edge of the toolbar facing the webpage.
+ * @param focusRequest Change this value to focus the editor and select its text.
  */
 @Composable
 fun BrowserToolbar(
@@ -81,6 +82,7 @@ fun BrowserToolbar(
     useMinimalBottomToolbarWhenEnteringText: Boolean = false,
     browserActionsColor: Color? = null,
     showDivider: Boolean = true,
+    focusRequest: Int = 0,
 ) {
     val uiState by store.observeAsComposableState { it }
     val cfrProperties = browserToolbarCFRProperties(uiState.gravity)
@@ -89,6 +91,7 @@ fun BrowserToolbar(
 
     if (uiState.isEditMode()) {
         BrowserEditToolbar(
+            focusRequest = focusRequest,
             query = uiState.editState.query.current,
             hint = stringResource(uiState.editState.hint),
             isQueryPrefilled = uiState.editState.isQueryPrefilled,

@@ -80,6 +80,9 @@ import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.UserInteractionOnBackPressedCallback
+import mozilla.components.support.keyboard.KeyboardShortcutDispatcher
+import mozilla.components.support.keyboard.KeyboardShortcutDispatcherOwner
+import mozilla.components.support.keyboard.setViewTreeKeyboardShortcutDispatcherOwner
 import mozilla.components.support.ktx.android.arch.lifecycle.addObservers
 import mozilla.components.support.ktx.android.content.call
 import mozilla.components.support.ktx.android.content.email
@@ -215,7 +218,9 @@ import org.mozilla.fenix.utils.changeAppLauncherIcon
  * - browser screen
  */
 @SuppressWarnings("TooManyFunctions", "LargeClass", "LongMethod")
-open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, CrashActionDispatcher {
+open class HomeActivity :
+    LocaleAwareAppCompatActivity(), NavHostActivity, CrashActionDispatcher, KeyboardShortcutDispatcherOwner {
+    override val keyboardShortcutDispatcher = KeyboardShortcutDispatcher()
     @VisibleForTesting internal lateinit var binding: ActivityHomeBinding
     lateinit var themeManager: ThemeManager
     lateinit var browsingModeManager: BrowsingModeManager
@@ -486,6 +491,8 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
         // `setupTheme` (or installSplashScreen). It must also be run before
         // the `setContent` starts attaching fragments.
         EdgeToEdgeFragmentLifecycleCallbacks.register(supportFragmentManager, window)
+
+        window.decorView.setViewTreeKeyboardShortcutDispatcherOwner(this)
 
         // Checks if Activity is currently in PiP mode if launched from external intents, then exits it
         checkAndExitPiP()
@@ -995,6 +1002,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
     override fun onDestroy() {
         val startTimeProfiler = components.core.engine.profiler?.getProfilerTime()
 
+        keyboardShortcutDispatcher.dispose()
         super.onDestroy()
 
         // Diagnostic breadcrumb for "Display already aquired" crash:
@@ -1355,7 +1363,14 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
                 return true
             }
         }
-        return super.dispatchKeyEvent(event)
+        return keyboardShortcutDispatcher.dispatchKeyEvent(event) || super.dispatchKeyEvent(event)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) {
+            keyboardShortcutDispatcher.resetPressedKeys()
+        }
     }
 
     final override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

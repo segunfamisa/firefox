@@ -556,6 +556,7 @@ dependencies {
     implementation project(':components:support-appservices')
     implementation project(':components:support-base')
     implementation project(':components:support-images')
+    implementation project(':components:support-keyboard')
     implementation project(':components:support-ktx')
     implementation project(':components:support-license')
     implementation project(':components:support-locale')

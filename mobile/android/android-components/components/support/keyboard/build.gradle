@@ -5,13 +5,24 @@
 plugins {
     id 'com.android.library'
     alias(libs.plugins.dependency.analysis)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
+    buildFeatures {
+        compose = true
+    }
+
     namespace = 'mozilla.components.support.keyboard'
 }
 
 dependencies {
+    api libs.androidx.lifecycle.runtime
+    api platform(libs.androidx.compose.bom)
+    api libs.androidx.compose.ui
+
+    implementation libs.androidx.lifecycle.compose
+
     implementation libs.androidx.core
     implementation libs.kotlinx.coroutines
 
