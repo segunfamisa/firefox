@@ -6,15 +6,14 @@ package org.mozilla.idea.ymlnavigator.gradle
 
 import com.intellij.openapi.components.Service
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 
 /** Stores Nimbus configuration imported during Gradle sync for this IDE project. */
 @Service(Service.Level.PROJECT)
-class NimbusModelIndex {
-    private val modules = ConcurrentHashMap<GradleProjectIdentity, NimbusModuleData>()
+class NimbusModelIndexService {
+    @Volatile private var modules: Map<GradleProjectIdentity, NimbusModuleData> = emptyMap()
 
-    fun replace(module: NimbusModuleData) {
-        modules[module.gradleProjectIdentity] = module
+    fun replaceAll(importedModules: Collection<NimbusModuleData>) {
+        modules = importedModules.associateBy { module -> module.gradleProjectIdentity }
     }
 
     /** Finds the imported module that declares the [inputFile]. */
