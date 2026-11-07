@@ -18,8 +18,11 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
+import org.mozilla.appservices.tooling.nimbus.ide.NimbusIdeModelBuilder
 import org.mozilla.conventions.isTruthy
 import java.io.File
+import javax.inject.Inject
 
 abstract class ApplicationServicesVersionSource : ValueSource<String, ApplicationServicesVersionSource.Parameters> {
     interface Parameters : ValueSourceParameters {
@@ -93,9 +96,11 @@ abstract class NimbusPluginExtension {
     abstract val applicationServicesDir: Property<String>
 }
 
-class NimbusPlugin : Plugin<Project> {
+class NimbusPlugin @Inject constructor(private val toolingModels: ToolingModelBuilderRegistry) : Plugin<Project> {
+
     override fun apply(project: Project) {
         val extension = project.extensions.create("nimbus", NimbusPluginExtension::class.java)
+        toolingModels.register(NimbusIdeModelBuilder())
 
         // Configure default values ("conventions") for our
         // extension properties.
