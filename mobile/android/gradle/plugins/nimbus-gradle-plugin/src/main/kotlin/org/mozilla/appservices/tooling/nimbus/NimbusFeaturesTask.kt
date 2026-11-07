@@ -39,6 +39,9 @@ abstract class NimbusFeaturesTask : NimbusFmlCommandTask(), NimbusTask {
     @get:Input
     abstract val channel: Property<String>
 
+    @get:Input
+    abstract val variantName: Property<String>
+
     @get:LocalState
     abstract override val cacheDir: DirectoryProperty
 

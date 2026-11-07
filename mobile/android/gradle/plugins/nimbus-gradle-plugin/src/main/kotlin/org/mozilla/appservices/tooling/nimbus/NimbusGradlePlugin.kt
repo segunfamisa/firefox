@@ -201,6 +201,7 @@ class NimbusPlugin @Inject constructor(private val toolingModels: ToolingModelBu
                 val extension = project.extensions.getByType(NimbusPluginExtension::class.java)
                 manifestDependencies.setFrom(project.files(extension.manifestDependencies))
                 channel.set(extension.channels.getting(variant.name).orElse(variant.name))
+                variantName.set(variant.name)
                 outputDir.set(project.layout.buildDirectory.dir("generated/source/nimbus/${variant.name}/kotlin"))
             }
             configureGenerateTask(generateTask)
