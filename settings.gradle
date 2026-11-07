@@ -14,6 +14,7 @@ pluginManagement {
     }
 
     includeBuild("${rootProject.projectDir.absolutePath}/mobile/android/gradle/plugins/conventions")
+    includeBuild("${rootProject.projectDir.absolutePath}/mobile/android/gradle/plugins/idea-yml-navigator")
     includeBuild("${rootProject.projectDir.absolutePath}/mobile/android/android-components/plugins/config")
     includeBuild("${rootProject.projectDir.absolutePath}/mobile/android/android-components/plugins/dependencies")
     includeBuild("${rootProject.projectDir.absolutePath}/mobile/android/android-components/plugins/publicsuffixlist")
