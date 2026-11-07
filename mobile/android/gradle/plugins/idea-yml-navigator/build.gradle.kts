@@ -17,6 +17,7 @@ repositories {
 
 dependencies {
     intellijPlatform {
+        local("/Users/sf/Applications/Android Studio Stable.app")
         bundledPlugin("com.intellij.gradle")
     }
 }
