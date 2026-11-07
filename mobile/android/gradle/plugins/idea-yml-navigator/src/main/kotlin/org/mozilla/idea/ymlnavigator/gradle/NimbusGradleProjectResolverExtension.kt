@@ -4,7 +4,6 @@
 
 package org.mozilla.idea.ymlnavigator.gradle
 
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ModuleData
 import org.gradle.tooling.model.idea.IdeaModule
@@ -19,21 +18,31 @@ class NimbusGradleProjectResolverExtension : AbstractProjectResolverExtension() 
     override fun populateModuleExtraModels(gradleModule: IdeaModule, moduleDataNode: DataNode<ModuleData>) {
         val model = resolverCtx.getExtraProject(gradleModule, NimbusIdeModel::class.java)
         if (model != null) {
-            logger.info(
-                "Received Nimbus inputs: ${model.getRootManifestFile()}, " +
-                    model.getManifestDependencies().joinToString()
+            // attach the Nimbus configuration to the module
+            moduleDataNode.createChild(
+                /* key= */ NimbusModuleData.KEY,
+                /* data= */ NimbusModuleData(
+                    gradleProjectIdentity =
+                        GradleProjectIdentity(
+                            buildRootDirectory =
+                                gradleModule.gradleProject.projectIdentifier.buildIdentifier.rootDir.canonicalFile,
+                            projectPath = gradleModule.gradleProject.projectIdentifier.projectPath,
+                        ),
+                    rootManifestFile = model.getRootManifestFile(),
+                    manifestDependencies = model.getManifestDependencies(),
+                    variants =
+                        model.getVariants().map { variant ->
+                            NimbusVariant(
+                                name = variant.getName(),
+                                channel = variant.getChannel(),
+                                generationTaskPath = variant.getGenerationTaskPath(),
+                                generatedKotlinSourceDirectory = variant.getGeneratedKotlinSourceDirectory(),
+                            )
+                        },
+                ),
             )
-            model.getVariants().forEach { variant ->
-                logger.info(
-                    "Received Nimbus variant: ${variant.getName()} (${variant.getChannel()}), " +
-                        "${variant.getGenerationTaskPath()} -> ${variant.getGeneratedKotlinSourceDirectory()}"
-                )
-            }
         }
-        super.populateModuleExtraModels(gradleModule, moduleDataNode)
-    }
 
-    private companion object {
-        val logger = Logger.getInstance(NimbusGradleProjectResolverExtension::class.java)
+        super.populateModuleExtraModels(gradleModule, moduleDataNode)
     }
 }
