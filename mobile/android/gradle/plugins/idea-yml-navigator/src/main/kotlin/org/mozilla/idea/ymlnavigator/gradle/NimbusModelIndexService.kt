@@ -18,7 +18,11 @@ class NimbusModelIndexService {
 
     /** Finds the imported module that declares the [inputFile]. */
     fun findOwner(inputFile: File): NimbusModuleData? {
-        return modules.values.firstOrNull { module -> inputFile.canonicalFile in module.inputFiles }
+        val canonicalInputFile = inputFile.canonicalFile
+        return modules.values.firstOrNull { module -> module.rootManifestFile.canonicalFile == canonicalInputFile }
+            ?: modules.values.firstOrNull { module ->
+                module.manifestDependencies.any { dependency -> dependency.canonicalFile == canonicalInputFile }
+            }
     }
 
     fun all(): Collection<NimbusModuleData> = modules.values
