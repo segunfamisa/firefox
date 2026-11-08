@@ -16,5 +16,12 @@
   <extensions defaultExtensionNs="com.intellij">
     <externalProjectDataService
       implementation="org.mozilla.idea.ymlnavigator.gradle.NimbusModuleDataService" />
+    <codeInsight.lineMarkerProvider
+      language="yaml"
+      implementationClass="org.mozilla.idea.ymlnavigator.nimbus.NimbusFmlLineMarkerProvider" />
+    <codeVisionProvider implementation="org.mozilla.idea.ymlnavigator.nimbus.NimbusFeatureUsageCodeVisionProvider" />
+    <psi.referenceContributor
+      language="yaml"
+      implementation="org.mozilla.idea.ymlnavigator.nimbus.NimbusFeatureReferenceContributor" />
   </extensions>
 </idea-plugin>
