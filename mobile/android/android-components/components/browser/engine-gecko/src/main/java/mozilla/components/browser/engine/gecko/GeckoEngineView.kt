@@ -280,7 +280,7 @@ constructor(
 
     override fun removeWindowInsetsListener(key: String) = geckoView.removeWindowInsetsListener(key)
 
-    override fun setOnKeyListener(listener: View.OnKeyListener?) = geckoView.setOnKeyListener(listener)
+    override fun setOnKeyEventListener(listener: View.OnKeyListener?) = geckoView.setOnKeyEventListener(listener)
 
     companion object {
         internal const val DARK_COVER = 0xFF2A2A2E.toInt()

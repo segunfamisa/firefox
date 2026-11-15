@@ -746,6 +746,10 @@ import org.mozilla.gecko.util.ThreadUtils;
 
   @Override
   public boolean sendKeyEvent(final @NonNull KeyEvent event) {
+    if (((GeckoView) getView()).dispatchKeyEventToListener(event)) {
+      return true;
+    }
+
     final KeyEvent translatedEvent = translateKey(event.getKeyCode(), event);
     mEditableClient.sendKeyEvent(getView(), event.getAction(), translatedEvent);
     return false; // seems to always return false

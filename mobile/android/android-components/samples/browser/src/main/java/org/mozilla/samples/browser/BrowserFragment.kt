@@ -5,6 +5,7 @@
 package org.mozilla.samples.browser
 
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +19,7 @@ import mozilla.components.concept.awesomebar.AwesomeBar.GroupedSuggestion
 import mozilla.components.feature.awesomebar.AwesomeBarFeature
 import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
 import mozilla.components.feature.awesomebar.provider.SearchTermSuggestionsProvider
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcut
 import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
 import mozilla.components.feature.search.SearchFeature
 import mozilla.components.feature.session.FullScreenFeature
@@ -175,6 +177,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         return binding.root
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        registerShortcuts()
+    }
+
     private fun deleteHistoryEntry(
         entry: GroupedSuggestion,
         historyStorage: PlacesHistoryStorage,
@@ -198,6 +205,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
             }
         }
+
+    private fun registerShortcuts() {
+        keyboardShortcutFeature.withFeature {
+            it.register(this, KeyboardShortcut(KeyEvent.KEYCODE_L, ctrl = true), enabled = true) {
+                binding.toolbar.editMode()
+            }
+        }
+    }
 
     private fun showTabs() {
         // For now we are performing manual fragment transactions here. Once we can use the new

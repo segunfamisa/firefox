@@ -96,9 +96,11 @@ import mozilla.components.feature.downloads.manager.FetchDownloadManager
 import mozilla.components.feature.downloads.temporary.CopyDownloadFeature
 import mozilla.components.feature.downloads.temporary.ShareResourceFeature
 import mozilla.components.feature.findinpage.view.FindInPageBar
-import mozilla.components.feature.keyboardshortcut.KeyboardShortcutFeature
 import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
 import mozilla.components.feature.ipprotection.IPProtectionWarningBinding
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutDispatcher
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutFeature
+import mozilla.components.feature.keyboardshortcut.findShortcutDispatcher
 import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
 import mozilla.components.feature.privatemode.feature.SecureWindowFeature
 import mozilla.components.feature.prompts.PromptFeature
@@ -333,7 +335,11 @@ abstract class BaseBrowserFragment :
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
 
     @VisibleForTesting internal val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
+    private val keyboardShortcutDispatcher: KeyboardShortcutDispatcher
+        get() = binding.root.findShortcutDispatcher()!!
+
     private val keyboardShortcutFeature = ViewBoundFeatureWrapper<KeyboardShortcutFeature>()
+    private val browserKeyboardShortcutFeature = ViewBoundFeatureWrapper<BrowserKeyboardShortcutFeature>()
     private val toolbarsIntegration = ViewBoundFeatureWrapper<ToolbarsIntegration>()
     private val pdfToolsIntegration = ViewBoundFeatureWrapper<PdfToolsIntegration>()
     private val bottomToolbarContainerIntegration = ViewBoundFeatureWrapper<BottomToolbarContainerIntegration>()
@@ -452,13 +458,17 @@ abstract class BaseBrowserFragment :
 
         initializeUI(view)
 
-        keyboardShortcutFeature.set(
-            feature = KeyboardShortcutFeature(
-                store = requireComponents.core.store,
-                engineView = binding.engineView,
-                sessionUseCases = requireComponents.useCases.sessionUseCases,
-                tabsUseCases = requireComponents.useCases.tabsUseCases,
-            ),
+        browserKeyboardShortcutFeature.set(
+            feature =
+                BrowserKeyboardShortcutFeature(
+                    store = requireComponents.core.store,
+                    appStore = requireComponents.appStore,
+                    engineView = binding.engineView,
+                    dispatcher = keyboardShortcutDispatcher,
+                    sessionUseCases = requireComponents.useCases.sessionUseCases,
+                    tabsUseCases = requireComponents.useCases.tabsUseCases,
+                    addTab = { addTab(requireComponents.settings, requireComponents.appStore) },
+                ),
             owner = this,
             view = view,
         )
@@ -1667,18 +1677,7 @@ abstract class BaseBrowserFragment :
                 showTabCounterButton = false,
                 hideWhenKeyboardShown = settings.shouldUseBottomTabStrip,
                 onAddTabClick = {
-                    if (settings.enableHomepageAsNewTab) {
-                        requireComponents.useCases.fenixBrowserUseCases.addNewHomepageTab(
-                            private = appStore.state.mode.isPrivate
-                        )
-                    } else {
-                        findNavController()
-                            .navigate(
-                                NavGraphDirections.actionGlobalHome(
-                                    focusOnAddressBar = !settings.enableHomepageTrendingRecentSearch
-                                )
-                            )
-                    }
+                    addTab(settings, appStore)
                 },
                 onLastTabClose = { isPrivate ->
                     handleTabStripLastTabClosed(
@@ -1699,6 +1698,19 @@ abstract class BaseBrowserFragment :
                 },
                 onTabCounterClick = { onTabCounterClicked(appStore.state.mode) },
             )
+        }
+    }
+
+    private fun addTab(settings: org.mozilla.fenix.utils.Settings, appStore: AppStore) {
+        if (settings.enableHomepageAsNewTab) {
+            requireComponents.useCases.fenixBrowserUseCases.addNewHomepageTab(private = appStore.state.mode.isPrivate)
+        } else {
+            findNavController()
+                .navigate(
+                    NavGraphDirections.actionGlobalHome(
+                        focusOnAddressBar = !settings.enableHomepageTrendingRecentSearch
+                    )
+                )
         }
     }
 

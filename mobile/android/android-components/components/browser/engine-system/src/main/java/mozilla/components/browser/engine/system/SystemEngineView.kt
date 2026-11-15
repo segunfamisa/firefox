@@ -801,7 +801,7 @@ constructor(
         return credentialsPair
     }
 
-    override fun setOnKeyListener(listener: View.OnKeyListener?) {
+    override fun setOnKeyEventListener(listener: View.OnKeyListener?) {
         session?.webView?.setOnKeyListener(listener)
     }
 

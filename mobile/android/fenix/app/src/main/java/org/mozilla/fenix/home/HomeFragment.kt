@@ -74,6 +74,7 @@ import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.feature.accounts.push.SendTabUseCases
 import mozilla.components.feature.ipprotection.IPProtectionWarningBinding
+import mozilla.components.feature.keyboardshortcut.findShortcutDispatcher
 import mozilla.components.feature.tab.collections.TabCollection
 import mozilla.components.feature.top.sites.presenter.DefaultTopSitesPresenter
 import mozilla.components.lib.state.ext.flow
@@ -280,6 +281,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
     private lateinit var privacyNoticeBannerStore: PrivacyNoticeBannerStore
     private lateinit var collectionsMigrationCardStore: CollectionsMigrationCardStore
 
+    private lateinit var toolbarStore: BrowserToolbarStore
     private var _sessionControlController: SessionControlController? = null
 
     private var homeTabPreview: TabPreview? = null
@@ -318,6 +320,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
     private val trackersBlockedFeature = ViewBoundFeatureWrapper<TrackersBlockedFeature>()
     private val ipProtectionWarningBinding = ViewBoundFeatureWrapper<IPProtectionWarningBinding>()
     private val continuousOnboardingFeature = ViewBoundFeatureWrapper<ContinuousOnboardingFeature>()
+    private val homeKeyboardShortcuts = ViewBoundFeatureWrapper<HomeKeyboardShortcuts>()
 
     private var qrScanFenixFeature: ViewBoundFeatureWrapper<QrScanFenixFeature>? = ViewBoundFeatureWrapper()
     private val qrScanLauncher: ActivityResultLauncher<Intent> =
@@ -476,6 +479,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
 
     private fun buildToolbar(activity: HomeActivity, view: View): FenixHomeToolbar {
         val toolbarStore by buildToolbarStore(activity)
+        this.toolbarStore = toolbarStore
 
         homeNavigationBar =
             HomeNavigationBar(
@@ -595,6 +599,7 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
         initSnackbarBinding(view = view)
         initIpProtectionBindings(view = view)
         initContinuousOnboardingFeature()
+        initKeyboardShortcutsFeature(view = view)
 
         if (requireComponents.settings.shouldShowTabGroupsStrip) {
             tabGroupsStripStore.dispatch(TabGroupsStripAction.InitializeDataObservation)
@@ -1656,6 +1661,19 @@ class HomeFragment : Fragment(), UserInteractionHandler, OnLongPressedListener {
                     promptDetails = promptDetails,
                 )
             },
+        )
+    }
+
+    private fun initKeyboardShortcutsFeature(view: View) {
+        homeKeyboardShortcuts.set(
+            feature =
+                HomeKeyboardShortcuts(
+                    dispatcher = view.findShortcutDispatcher(),
+                    toolbarStore = toolbarStore,
+                    appStore = requireComponents.appStore,
+                ),
+            owner = viewLifecycleOwner,
+            view = view,
         )
     }
 

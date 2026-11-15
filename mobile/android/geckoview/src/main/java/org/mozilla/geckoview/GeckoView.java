@@ -94,6 +94,7 @@ public class GeckoView extends FrameLayout implements GeckoDisplay.NewSurfacePro
 
   /** The currently attached GeckoSession, or null if none is set. */
   protected @Nullable GeckoSession mSession;
+  private @Nullable OnKeyListener mOnKeyEventListener;
 
   WeakReference<Autofill.Session> mAutofillSession = new WeakReference<>(null);
 
@@ -911,8 +912,33 @@ public class GeckoView extends FrameLayout implements GeckoDisplay.NewSurfacePro
     return mSession.getTextInput().onCreateInputConnection(outAttrs);
   }
 
+  /**
+   * Set a listener for hardware key events before they are handled by Gecko or the IME.
+   *
+   * @param listener Listener to invoke, or null to remove the listener.
+   */
+  public void setOnKeyEventListener(final @Nullable OnKeyListener listener) {
+    mOnKeyEventListener = listener;
+  }
+
+  /* package */ boolean dispatchKeyEventToListener(final KeyEvent event) {
+    return mOnKeyEventListener != null
+        && mOnKeyEventListener.onKey(this, event.getKeyCode(), event);
+  }
+
+  @Override
+  public boolean dispatchKeyEvent(final KeyEvent event) {
+    if (dispatchKeyEventToListener(event)) {
+      return true;
+    }
+    return super.dispatchKeyEvent(event);
+  }
+
   @Override
   public boolean onKeyPreIme(final int keyCode, final KeyEvent event) {
+    if (dispatchKeyEventToListener(event)) {
+      return true;
+    }
     if (super.onKeyPreIme(keyCode, event)) {
       return true;
     }

@@ -78,6 +78,9 @@ import mozilla.components.feature.search.BrowserStoreSearchAdapter
 import mozilla.components.lib.crash.Crash
 import mozilla.components.lib.crash.store.CrashAction
 import mozilla.components.service.fxa.sync.SyncReason
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutDispatcher
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutDispatcherOwner
+import mozilla.components.feature.keyboardshortcut.setViewTreeKeyboardShortcutDispatcherOwner
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.UserInteractionOnBackPressedCallback
@@ -219,7 +222,12 @@ import org.mozilla.fenix.utils.changeAppLauncherIcon
  * - browser screen
  */
 @SuppressWarnings("TooManyFunctions", "LargeClass", "LongMethod")
-open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, CrashActionDispatcher {
+open class HomeActivity :
+    LocaleAwareAppCompatActivity(),
+    NavHostActivity,
+    CrashActionDispatcher,
+    KeyboardShortcutDispatcherOwner {
+    override val keyboardShortcutDispatcher = KeyboardShortcutDispatcher()
     @VisibleForTesting internal lateinit var binding: ActivityHomeBinding
     lateinit var themeManager: ThemeManager
     lateinit var browsingModeManager: BrowsingModeManager
@@ -603,6 +611,7 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
         }
 
         setContentView(binding.root)
+        window.decorView.setViewTreeKeyboardShortcutDispatcherOwner(this)
         ProfilerMarkers.addListenerForOnGlobalLayout(components.core.engine, this, binding.root)
 
         privateNotificationObserver =
@@ -1360,6 +1369,10 @@ open class HomeActivity : LocaleAwareAppCompatActivity(), NavHostActivity, Crash
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (keyboardShortcutDispatcher.dispatchKeyEvent(event)) {
+            return true
+        }
+
         // The KEYCODE_MENU event is handled here instead of onKeyDown or onKeyUp because
         // after navigating to another fragment like Settings or Bookmarks, and then back this
         // key event is somehow getting consumed before it reaches onKeyDown or onKeyUp.

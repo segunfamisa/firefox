@@ -88,7 +88,7 @@ class EngineViewTest {
 
         override fun removeWindowInsetsListener(key: String) {}
 
-        override fun setOnKeyListener(listener: View.OnKeyListener?) {}
+        override fun setOnKeyEventListener(listener: View.OnKeyListener?) {}
     }
 
     // Class it not actually a View!
@@ -117,6 +117,6 @@ class EngineViewTest {
 
         override fun removeWindowInsetsListener(key: String) {}
 
-        override fun setOnKeyListener(listener: View.OnKeyListener?) {}
+        override fun setOnKeyEventListener(listener: View.OnKeyListener?) {}
     }
 }
