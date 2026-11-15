@@ -96,6 +96,7 @@ import mozilla.components.feature.downloads.manager.FetchDownloadManager
 import mozilla.components.feature.downloads.temporary.CopyDownloadFeature
 import mozilla.components.feature.downloads.temporary.ShareResourceFeature
 import mozilla.components.feature.findinpage.view.FindInPageBar
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutFeature
 import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
 import mozilla.components.feature.ipprotection.IPProtectionWarningBinding
 import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
@@ -332,6 +333,7 @@ abstract class BaseBrowserFragment :
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
 
     @VisibleForTesting internal val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
+    private val keyboardShortcutFeature = ViewBoundFeatureWrapper<KeyboardShortcutFeature>()
     private val toolbarsIntegration = ViewBoundFeatureWrapper<ToolbarsIntegration>()
     private val pdfToolsIntegration = ViewBoundFeatureWrapper<PdfToolsIntegration>()
     private val bottomToolbarContainerIntegration = ViewBoundFeatureWrapper<BottomToolbarContainerIntegration>()
@@ -449,6 +451,17 @@ abstract class BaseBrowserFragment :
         val profilerStartTime = requireComponents.core.engine.profiler?.getProfilerTime()
 
         initializeUI(view)
+
+        keyboardShortcutFeature.set(
+            feature = KeyboardShortcutFeature(
+                store = requireComponents.core.store,
+                engineView = binding.engineView,
+                sessionUseCases = requireComponents.useCases.sessionUseCases,
+                tabsUseCases = requireComponents.useCases.tabsUseCases,
+            ),
+            owner = this,
+            view = view,
+        )
 
         appLinksFeature.set(
             feature =

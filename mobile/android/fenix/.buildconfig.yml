@@ -48,6 +48,7 @@ projects:
     - components:feature-customtabs
     - components:feature-downloads
     - components:feature-findinpage
+    - components:feature-keyboardshortcut
     - components:feature-fxsuggest
     - components:feature-importer
     - components:feature-intent
