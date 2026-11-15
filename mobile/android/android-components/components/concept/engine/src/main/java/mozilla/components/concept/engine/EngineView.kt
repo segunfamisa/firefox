@@ -139,6 +139,9 @@ interface EngineView {
     /** A delegate that will handle interactions with text selection context menus. */
     var selectionActionDelegate: SelectionActionDelegate?
 
+    /** Register a callback to be invoked when a hardware key is pressed. */
+    fun setOnKeyListener(listener: View.OnKeyListener?)
+
     /**
      * Enumeration of all possible ways user's [android.view.MotionEvent] was handled.
      *

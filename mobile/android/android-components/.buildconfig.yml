@@ -1202,6 +1202,14 @@ projects:
     - components:tooling-lint
     - components:ui-colors
     - components:ui-icons
+  components:feature-keyboardshortcut:
+    description: Feature component to perform keyboard shortcut.
+    path: components/feature/keyboardshortcut
+    publish: true
+    upstream_dependencies:
+    - components:concept-engine
+    - components:support-base
+    - components:tooling-lint
   components:feature-logins:
     description: Feature component for logins related features.
     path: components/feature/logins

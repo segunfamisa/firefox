@@ -6,6 +6,7 @@ package mozilla.components.concept.engine
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.view.View
 import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlin.test.assertIs
@@ -86,6 +87,8 @@ class EngineViewTest {
         ) {}
 
         override fun removeWindowInsetsListener(key: String) {}
+
+        override fun setOnKeyListener(listener: View.OnKeyListener?) {}
     }
 
     // Class it not actually a View!
@@ -113,5 +116,7 @@ class EngineViewTest {
         ) {}
 
         override fun removeWindowInsetsListener(key: String) {}
+
+        override fun setOnKeyListener(listener: View.OnKeyListener?) {}
     }
 }

@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.AttributeSet
+import android.view.View
 import android.widget.FrameLayout
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.OnApplyWindowInsetsListener as AndroidxOnApplyWindowInsetsListener
@@ -278,6 +279,8 @@ constructor(
     ) = geckoView.addWindowInsetsListener(key, listener)
 
     override fun removeWindowInsetsListener(key: String) = geckoView.removeWindowInsetsListener(key)
+
+    override fun setOnKeyListener(listener: View.OnKeyListener?) = geckoView.setOnKeyListener(listener)
 
     companion object {
         internal const val DARK_COVER = 0xFF2A2A2E.toInt()

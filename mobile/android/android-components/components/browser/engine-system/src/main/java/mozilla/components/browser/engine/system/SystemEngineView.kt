@@ -801,6 +801,10 @@ constructor(
         return credentialsPair
     }
 
+    override fun setOnKeyListener(listener: View.OnKeyListener?) {
+        session?.webView?.setOnKeyListener(listener)
+    }
+
     companion object {
 
         // Maximum number of successive dialogs before we prompt users to disable dialogs.

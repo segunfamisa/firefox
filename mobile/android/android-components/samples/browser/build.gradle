@@ -107,6 +107,7 @@ dependencies {
     implementation project(':components:feature-downloads')
     implementation project(':components:feature-findinpage')
     implementation project(':components:feature-intent')
+    implementation project(':components:feature-keyboardshortcut')
     implementation project(':components:feature-media')
     implementation project(':components:feature-privatemode')
     implementation project(':components:feature-prompts')

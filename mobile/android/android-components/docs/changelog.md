@@ -5,6 +5,9 @@ permalink: /changelog/
 ---
 
 # 162.0 (In Development)
+* **feature-keyboardshortcut**
+  * 🆕 New
+
 * **concept-engine**
   * Added an optional `title` to `HitResult.IMAGE_SRC`.
   * 🆕 Added `EngineSession.requestPictureInPicture` and `EngineSession.exitPictureInPicture` to ask the engine for a picture-in-picture window for the video a session is playing, and to tell it the window has been closed so it can release the state it holds. [Bug 2075323](https://bugzilla.mozilla.org/show_bug.cgi?id=2075323)

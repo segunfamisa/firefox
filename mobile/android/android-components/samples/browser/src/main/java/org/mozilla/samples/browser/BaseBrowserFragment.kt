@@ -17,6 +17,7 @@ import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.toolbar.display.DisplayToolbar
 import mozilla.components.feature.downloads.DownloadsFeature
 import mozilla.components.feature.downloads.manager.FetchDownloadManager
+import mozilla.components.feature.keyboardshortcut.KeyboardShortcutFeature
 import mozilla.components.feature.privatemode.feature.SecureWindowFeature
 import mozilla.components.feature.prompts.PromptFeature
 import mozilla.components.feature.session.CoordinateScrollingFeature
@@ -56,6 +57,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
+    private val keyboardShortcutFeature = ViewBoundFeatureWrapper<KeyboardShortcutFeature>()
 
     protected val sessionId: String?
         get() = arguments?.getString(SESSION_ID_KEY)
@@ -255,6 +257,12 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
         findInPageIntegration.set(
             feature = FindInPageIntegration(components.store, binding.findInPage, binding.engineView),
+            owner = this,
+            view = binding.root,
+        )
+
+        keyboardShortcutFeature.set(
+            feature = KeyboardShortcutFeature(binding.engineView),
             owner = this,
             view = binding.root,
         )

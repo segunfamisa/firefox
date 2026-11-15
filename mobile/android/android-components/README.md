@@ -117,6 +117,8 @@ _Combined components to implement feature-specific use cases._
 
 * 🔵 [**Downloads**](components/feature/downloads/README.md) - A component to perform downloads using the [Android downloads manager](https://developer.android.com/reference/android/app/DownloadManager).
 
+* 🔵 [**Keyboard Shortbut**](components/feature/keyboardshortcut/README.md) - A component to perform keyboard shortcut.
+
 * 🔵 [**Intent**](components/feature/intent/README.md) - A component that provides intent processing functionality by combining various other feature modules.
 
 * ⚪ [**Progressive Web Apps (PWA)**](components/feature/pwa/README.md) - A component that provides functionality for supporting Progressive Web Apps (PWA).
